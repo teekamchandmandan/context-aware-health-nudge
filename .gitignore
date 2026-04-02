@@ -1,0 +1,25 @@
+# Byte-compiled
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# SQLite databases
+*.db
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Node
+node_modules/
+dist/
+
+# Env
+.env
+.env.local
