@@ -1,16 +1,29 @@
 # Final Plan: Context-Aware Health Nudge
 
-## 1. Goal
+## 1. Objective
 
-This project will deliver a focused end-to-end vertical slice for the Digbi Health assignment. The goal is to show sound product judgment and clean execution through a single workflow that covers personalized nudges, explicit confidence handling, safe escalation to a coach, coach visibility, auditability, and responsible LLM usage.
+This project will deliver the Digbi Health assignment as a focused end-to-end vertical slice. The slice should show a personalized nudge, explain why it appeared, handle confidence explicitly, escalate safely to a coach when needed, expose that activity in a coach view, and keep a clear audit trail. LLM usage is allowed only as a phrasing layer, never as the source of truth for decisioning.
 
-The scope is intentionally narrow. This should read as a coherent product slice, not as the first draft of a generalized health platform.
+The scope is intentionally narrow. The goal is a coherent product slice built well, not the start of a broad health platform.
 
----
+## 2. Delivery Structure
 
-## 2. Scope
+Implementation should follow the phase specs in the `docs` folder:
 
-The implementation will stay tightly bounded around one complete member-to-coach workflow.
+- [phase-01-foundation-and-data.md](./phase-01-foundation-and-data.md)
+- [phase-02-decision-engine.md](./phase-02-decision-engine.md)
+- [phase-03-api-contracts.md](./phase-03-api-contracts.md)
+- [phase-04-member-experience.md](./phase-04-member-experience.md)
+- [phase-05-coach-experience.md](./phase-05-coach-experience.md)
+- [phase-06-llm-safety-and-phrasing.md](./phase-06-llm-safety-and-phrasing.md)
+- [phase-07-observability-and-audit.md](./phase-07-observability-and-audit.md)
+- [phase-08-quality-demo-and-delivery.md](./phase-08-quality-demo-and-delivery.md)
+
+This document is the high-level decision record. The phase files hold execution detail and branch boundaries.
+
+## 3. Scope Boundaries
+
+The implementation will stay centered on one member-to-coach workflow.
 
 | In scope                                              | Out of scope                  |
 | ----------------------------------------------------- | ----------------------------- |
@@ -22,51 +35,53 @@ The implementation will stay tightly bounded around one complete member-to-coach
 | Audit trail for key system events                     | Compliance-grade infra        |
 | SQLite, local setup, no Docker                        | Configurable rules UI         |
 
-This keeps the project small enough to finish well while still demonstrating full-stack thinking.
-
----
-
-## 3. Architecture
-
-```text
-React SPA (Vite + Tailwind)        FastAPI Backend              SQLite
-├── Member view                    ├── Context loading          ├── members
-└── Coach view                     ├── Decision engine          ├── signals
-    │                              ├── LLM phrasing layer       ├── nudges
-    │    GET/POST /api/*           ├── Nudge lifecycle          ├── nudge_actions
-    └──────────────────────────────├── Coach APIs               ├── escalations
-                                   └── Audit logging            └── audit_events
-```
-
-The frontend will use Vite, React, React Router, and Tailwind CSS. A strict SPA keeps the interaction model simple and avoids introducing SSR complexity that is not needed for this assignment.
-
-The backend will use Python, FastAPI, and Pydantic. That stack gives a clean API surface, strong typing, straightforward request validation, and a natural integration point for an LLM phrasing layer.
-
-SQLite is the right persistence choice for this scope. It keeps local setup friction low while still allowing the data model to be explicit and relational.
-
----
-
-## 4. Scenarios
+## 4. Product Scenarios
 
 The product will support exactly three scenarios.
 
 ### Scenario 1: Meal goal mismatch
 
-If a member logs a high-carb meal while their goal is low-carb, the system will suggest a lighter next meal. This is a high-confidence nudge because the rule match is direct and easy to explain.
+If a member logs a high-carb meal while their goal is low-carb, the system suggests a lighter next meal. This is a high-confidence nudge because the rule match is direct and easy to explain.
 
 ### Scenario 2: Missed weight logging
 
-If a member has not logged weight for several days, the system will generate a gentle reminder to check in. This usually falls in the medium to high confidence range because the signal is clear but the best phrasing should stay soft.
+If a member has not logged weight for several days, the system sends a gentle reminder to check in. The signal is clear, but the phrasing should stay soft.
 
 ### Scenario 3: Support risk
 
-If signals indicate low mood combined with repeated dismissals, or if the member explicitly asks for help, the system will escalate the case to a coach. This is the low-confidence path where the product should defer to a human rather than continue automated nudging.
+If signals indicate low mood combined with repeated dismissals, or if the member explicitly asks for help, the system escalates the case to a coach. This is the path where the product should defer to a human rather than continue automated nudging.
 
----
+## 5. Architecture and Stack
 
-## 5. Confidence Policy
+```mermaid
+flowchart LR
+    Client["Client<br/>Member view<br/>Coach view"]
+    Server["Server<br/>API layer<br/>Decision engine<br/>LLM phrasing<br/>Audit logging"]
+    Data[("SQLite<br/>members, signals, nudges,<br/>actions, escalations, audit")]
 
-Confidence handling should be explicit and predictable.
+    Client --> Server
+    Server --> Data
+```
+
+The frontend will use Vite, React, React Router, and Tailwind CSS, with light TypeScript where it improves clarity. A single-page app keeps the interaction model simple and avoids unnecessary SSR complexity.
+
+The backend will use Python, FastAPI, and Pydantic. That stack gives a clean API surface, strong validation, and a straightforward place to attach the phrasing layer.
+
+SQLite is the right persistence choice for this scope because it keeps local setup simple while preserving an explicit relational model.
+
+## 6. Decisioning Model
+
+The decision engine will use three explicit evaluator functions rather than a generic rules framework:
+
+1. `check_meal_goal_mismatch` compares recent meal signals against the member's goal.
+2. `check_missing_weight_log` evaluates how long it has been since the last weight signal.
+3. `check_support_risk` looks for low mood combined with repeated dismissals or other signs that should move the case to human review.
+
+Selection stays deterministic: evaluate all scenarios, collect matches, apply fatigue and deduplication rules, pick the highest-priority candidate, and then apply the confidence policy.
+
+An existing active nudge is never superseded in this prototype. Reevaluation happens only when there is no active nudge or after the current nudge reaches a terminal state.
+
+### Confidence policy
 
 | Tier   | Range     | Behavior                                                |
 | ------ | --------- | ------------------------------------------------------- |
@@ -74,87 +89,80 @@ Confidence handling should be explicit and predictable.
 | Medium | 0.50-0.74 | Deliver with softer language and flag in coach view     |
 | Low    | < 0.50    | Do not auto-deliver; create escalation for coach review |
 
-This policy gives low-confidence cases a clear destination and makes the coach experience meaningfully tied to the decisioning model.
+### Operating defaults
 
----
+| Area                        | Default                                                           |
+| --------------------------- | ----------------------------------------------------------------- |
+| Timestamp standard          | UTC ISO 8601 strings everywhere                                   |
+| Duplicate active nudge rule | Never generate a second active nudge while one remains unresolved |
+| Cooldown window             | 24 hours for the same `nudge_type` after `act_now` or `dismiss`   |
+| Daily cap                   | Maximum 2 auto-delivered nudges per member per UTC day            |
+| Support-risk fatigue        | Support-risk escalation bypasses cooldown and daily cap           |
+| Candidate priority order    | `support_risk` > `meal_guidance` > `weight_check_in`              |
+| Tie-breaker                 | Higher confidence first, then most recent matching signal         |
 
-## 6. Decision Engine
+- High- and medium-confidence nudges are persisted and returned as the active nudge.
+- Low-confidence outcomes create an escalation and return no auto-generated nudge.
+- The member API should represent this explicitly as `state: "active"`, `state: "no_nudge"`, or `state: "escalated"`.
 
-The decision engine will use three explicit evaluator functions. This is deliberate: the assignment calls for clear thinking and traceable behavior, not a generic rules framework.
+### Default evaluator thresholds
 
-1. `check_meal_goal_mismatch` compares recent meal signals against the member's stated goal.
-2. `check_missing_weight_log` evaluates how long it has been since the last weight signal.
-3. `check_support_risk` looks for low mood combined with repeated dismissals or other signals that should push the case toward human review.
+| Evaluator          | Default trigger                                                                                       | Confidence |
+| ------------------ | ----------------------------------------------------------------------------------------------------- | ---------- |
+| Meal goal mismatch | Member goal is `low_carb` and a meal in the last 24 hours has `carbs_g >= 60`                         | `0.86`     |
+| Missing weight log | No `weight_logged` signal in the last 4 full days                                                     | `0.68`     |
+| Support risk       | `mood_logged.mood` is `low` in the last 3 days and there are at least 2 dismissals in the last 7 days | `0.42`     |
 
-The selection flow will stay simple and deterministic: evaluate all scenarios, collect matches, apply fatigue and deduplication rules, pick the highest-priority candidate, and then apply the confidence policy.
+These are prototype defaults, not clinical logic. They exist to keep implementation concrete and reviewable.
 
-Fatigue controls will include no duplicate active nudge of the same type, a cooldown window per nudge type, and a daily cap so the product does not become noisy.
+## 7. LLM Usage and Guardrails
 
----
-
-## 7. LLM Integration
-
-The LLM should be a visible part of the solution, but it must remain carefully bounded.
+The LLM is a visible part of the solution, but it stays tightly bounded.
 
 ### Separation of concerns
 
 - The rule engine decides whether a nudge should exist, what type it is, how confident the system is, and whether escalation is recommended.
 - The LLM only improves phrasing after that decision has already been made.
 
-This keeps the core product logic deterministic and testable.
-
 ### Graceful degradation
 
 - If `OPENAI_API_KEY` is set, the system can use the LLM to generate phrasing.
-- If the key is missing, or if the LLM call fails or times out, the backend will fall back to deterministic templates automatically.
+- If the key is missing, or if the LLM call fails or times out, the backend falls back to deterministic templates automatically.
 - The application must remain fully usable without an API key.
 
 ### Guardrails
 
-- The system prompt will disallow diagnoses, medication guidance, and treatment claims.
-- Output length will be capped.
-- Responses will be validated against a lightweight blacklist before delivery.
-- Every LLM outcome will be logged as either `llm_call` or `llm_fallback`.
-
-This demonstrates responsible AI boundaries in a health context without turning the project into an AI-first prototype.
-
----
+- The system prompt disallows diagnoses, medication guidance, and treatment claims.
+- Output length is capped.
+- Responses are validated against a lightweight blacklist before delivery.
+- Every LLM outcome is logged as either `llm_call` or `llm_fallback`.
 
 ## 8. Data Model
 
-The schema will use six focused tables: `members`, `signals`, `nudges`, `nudge_actions`, `escalations`, and `audit_events`.
+The schema will use six focused tables:
 
-### `members`
+- `members`: `id`, `name`, `goal_type`, `profile_json`, `created_at`
+- `signals`: `id`, `member_id`, `signal_type`, `payload_json`, `created_at`
+- `nudges`: `id`, `member_id`, `nudge_type`, `content`, `explanation`, `matched_reason`, `confidence`, `escalation_recommended`, `status`, `generated_by`, `phrasing_source`, `created_at`, `delivered_at`
+- `nudge_actions`: `id`, `nudge_id`, `action_type`, `metadata_json`, `created_at`
+- `escalations`: `id`, `nudge_id`, `member_id`, `reason`, `source`, `status`, `created_at`, `resolved_at`
+- `audit_events`: `id`, `event_type`, `entity_type`, `entity_id`, `payload_json`, `created_at`
 
-`id`, `name`, `goal_type`, `profile_json`, `created_at`
+Enumerated values:
 
-### `signals`
+- `signal_type`: `meal_logged`, `weight_logged`, `mood_logged`
+- `nudge_type`: `meal_guidance`, `weight_check_in`, `support_risk`
+- `nudge.status`: `active`, `acted`, `dismissed`, `escalated`
+- `nudge_actions.action_type`: `act_now`, `dismiss`, `ask_for_help`
+- `escalations.status`: `open`, `resolved`
+- `generated_by`: always `rule_engine` in this prototype
+- `phrasing_source`: `template`, `llm`
 
-`id`, `member_id`, `signal_type`, `payload_json`, `created_at`
+`profile_json` and `payload_json` stay flexible, but timestamps should be UTC and seed data should use stable, deterministic IDs.
 
-### `nudges`
+## 9. API Surface
 
-`id`, `member_id`, `nudge_type`, `content`, `explanation`, `matched_reason`, `confidence`, `escalation_recommended`, `status`, `generated_by`, `created_at`, `delivered_at`
-
-### `nudge_actions`
-
-`id`, `nudge_id`, `action_type`, `metadata_json`, `created_at`
-
-### `escalations`
-
-`id`, `nudge_id`, `member_id`, `reason`, `source`, `status`, `created_at`, `resolved_at`
-
-### `audit_events`
-
-`id`, `event_type`, `entity_type`, `entity_id`, `payload_json`, `created_at`
-
-This model is small, but it is complete enough to support the member experience, coach workflow, escalation lifecycle, and audit trail without introducing platform-level complexity too early.
-
----
-
-## 9. APIs
-
-The API surface should stay compact and directly aligned with the product flow.
+The API should stay compact and align directly with the product flow.
 
 | Method | Endpoint                           | Purpose                                  |
 | ------ | ---------------------------------- | ---------------------------------------- |
@@ -164,62 +172,47 @@ The API surface should stay compact and directly aligned with the product flow.
 | GET    | `/api/coach/escalations`           | Return open escalations queue            |
 | POST   | `/api/members/{member_id}/signals` | Seed or demo helper                      |
 
-The `ask_for_help` action will automatically create an escalation so that the member path and coach path remain connected.
+The `ask_for_help` action automatically creates an escalation so the member path and coach path stay connected.
 
----
+Default API behavior:
 
-## 10. Member Experience
+- `GET /api/members/{member_id}/nudge` returns `200` with a structured body for `active`, `no_nudge`, or `escalated` states.
+- Coach endpoints default to `limit=20` and cap `limit` at `50`.
+- Validation failures return `422`, missing resources return `404`, and invalid state transitions return `409`.
 
-The member experience should stay simple and trustworthy.
+## 10. Product Surfaces
+
+### Member experience
 
 - Show one active nudge card at a time.
 - Include a short explanation such as "Why am I seeing this?" so the recommendation feels grounded in member context.
 - Offer exactly three actions: Act now, Dismiss, and Ask for help.
 
-The goal is not feature richness. The goal is to make the workflow legible and believable.
+### Coach experience
 
----
+The coach view should make it easy to see what the system has done and where human intervention is needed.
 
-## 11. Coach Experience
+- The recent nudges feed shows member name, nudge type, content, explanation, confidence, user response, escalation flag, and timestamp.
+- The open escalations queue shows member name, reason, source, status, and timestamp.
+- Lightweight filters are optional and only worth adding if they are cheap.
 
-The coach view should make it easy to understand what the system has done and where human intervention is needed.
-
-The recent nudges feed will show member name, nudge type, content, explanation, confidence, user response, escalation flag, and timestamp.
-
-The open escalations queue will show member name, reason, source, status, and timestamp.
-
-Lightweight filters can be added if they are cheap, but they are not required for the core submission.
-
----
-
-## 12. Logging and Auditability
+## 11. Observability and Seed Data
 
 The system should persist a clear audit trail for the key events in the workflow.
 
-Persisted audit events will include `nudge_generated`, `user_action`, `escalation_created`, `llm_call`, and `llm_fallback`.
+- Persisted audit events include `nudge_generated`, `user_action`, `escalation_created`, `llm_call`, and `llm_fallback`.
+- Structured backend logs should capture member ID, nudge ID, confidence, matched reason, escalation decision, and whether final phrasing came from a template or the LLM.
 
-Structured backend logs should capture member ID, nudge ID, confidence, matched reason, escalation decision, and whether the final phrasing came from a template or the LLM.
-
-This gives the project a credible safety and observability story without adding heavy operational machinery.
-
----
-
-## 13. Seed Data
-
-The seed dataset should let a reviewer exercise the core flows immediately.
+The seed dataset should let a reviewer exercise the core flows immediately:
 
 - One member for the meal mismatch case
 - One member for the missed weight logging case
 - One member for the support-risk or escalation case
 - At least one previously acted nudge and one previously dismissed nudge
 
-That is enough to demonstrate both happy-path behavior and stateful history.
+## 12. Quality and Delivery
 
----
-
-## 14. Testing
-
-Testing should focus on the parts of the system that are most important to trust.
+Testing should focus on the parts of the system that most directly affect trust.
 
 ### Backend tests
 
@@ -235,11 +228,7 @@ Testing should focus on the parts of the system that are most important to trust
 
 Walk all three scenarios end to end through both the member view and the coach view.
 
----
-
-## 15. Implementation Order
-
-The work should be sequenced so the core slice is always getting more complete rather than wider.
+### Implementation order
 
 | Phase                | Steps                                                                      |
 | -------------------- | -------------------------------------------------------------------------- |
@@ -250,22 +239,13 @@ The work should be sequenced so the core slice is always getting more complete r
 | **Coach flow**       | Recent nudges view, escalation queue                                       |
 | **Quality and docs** | Focused tests, README, product and technical note                          |
 
-This order protects the submission from ending up with UI shells that are not backed by working logic.
+### Documentation deliverables
 
----
+- `README.md` should include setup instructions, a simple architecture diagram, an explanation of the approach, a two-week improvement plan, and an AI usage disclosure.
+- The product and technical note should cover the user problem, assumptions, success metrics, major risks, and rollout plan, and it should describe the system that was actually built.
 
-## 16. Documentation Deliverables
-
-The written deliverables should describe the implemented system clearly and without over-claiming.
-
-`README.md` should include setup instructions, a simple architecture diagram, an explanation of the approach, a two-week improvement plan, and an AI usage disclosure.
-
-The product and technical note should cover the user problem, assumptions, success metrics, major risks, and rollout plan. It should describe the actual system that was built, not a larger future-state architecture.
-
----
-
-## 17. Intentional Exclusions
+## 13. Intentional Exclusions
 
 This plan intentionally excludes production auth, Docker, PostgreSQL, configurable rules UI, analytics dashboards, multi-channel delivery, coach workload management, real health data, ML confidence models, and compliance-grade infrastructure.
 
-That is a deliberate tradeoff. A strong submission here is a coherent and defensible vertical slice, not a broad but incomplete platform sketch.
+That tradeoff is deliberate. A strong submission here is a coherent and defensible vertical slice, not a broad but incomplete platform sketch.
