@@ -8,6 +8,8 @@ venv/
 
 # SQLite databases
 *.db
+*.db-shm
+*.db-wal
 
 # IDE
 .idea/
