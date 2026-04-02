@@ -15,6 +15,7 @@ This is the primary assignment experience. It should feel clear and trustworthy 
 ## Dependencies
 
 - [phase-03-api-contracts.md](./phase-03-api-contracts.md)
+- The Vite + React + TypeScript + Tailwind CSS scaffold in `client/` was established in Phase 01. No client setup step is needed.
 
 ## In Scope
 

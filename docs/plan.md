@@ -171,6 +171,7 @@ The API should stay compact and align directly with the product flow.
 | GET    | `/api/coach/nudges`                | Return recent nudges for coach view      |
 | GET    | `/api/coach/escalations`           | Return open escalations queue            |
 | POST   | `/api/members/{member_id}/signals` | Seed or demo helper                      |
+| POST   | `/debug/reset-seed`                | Dev-only: reset and reseed the database  |
 
 The `ask_for_help` action automatically creates an escalation so the member path and coach path stay connected.
 

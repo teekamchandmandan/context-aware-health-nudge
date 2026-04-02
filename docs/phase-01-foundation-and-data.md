@@ -36,6 +36,8 @@ None. This is the starting point.
 - Define the core domain entities: members, signals, nudges, nudge actions, escalations, and audit events.
 - Add seed data for the meal mismatch, missed weight logging, and support-risk scenarios.
 - Add one previously acted nudge and one previously dismissed nudge so later phases can validate history-aware logic.
+- Scaffold the client directory with Vite + React + TypeScript + Tailwind CSS v4 so Phase 04 can begin UI work without setup overhead.
+- Add a dev-only `POST /debug/reset-seed` endpoint (guarded by `DEBUG=true` env var) to support deterministic demo resets.
 
 ## Out of Scope
 
@@ -57,7 +59,7 @@ None. This is the starting point.
 The first branch should establish a minimal but durable layout.
 
 - `server/` for FastAPI application code, schema bootstrap, and seed scripts
-- `client/` as a Vite + React app shell only if scaffolding it early reduces future churn
+- `client/` as a Vite + React + TypeScript + Tailwind CSS scaffold (established in this phase)
 - `docs/` for planning and delivery notes
 - `data/` only if a checked-in SQLite file is needed for a demo snapshot; otherwise generate locally and ignore it
 
@@ -98,6 +100,7 @@ Example payload shapes:
 
 - Prefer a small, explicit schema over an abstraction-heavy model layer.
 - Keep JSON columns limited to fields that are genuinely variable, such as profile or signal payloads.
+- The `POST /debug/reset-seed` endpoint is registered only when the `DEBUG` environment variable is set to `true`. It is not mounted in non-debug mode.
 - Use stable seed member identities so frontend and API work can reliably reference them.
 - Make schema creation idempotent so branch rebases and reruns stay low-friction.
 - Add only the minimum application structure needed to support later phases cleanly.
