@@ -21,6 +21,7 @@ The assignment allows LLM usage, but the implementation should show restraint. T
 
 - Add optional LLM phrasing when `OPENAI_API_KEY` is configured.
 - Keep decision ownership in deterministic rules.
+- Apply LLM phrasing only to newly created member-visible active nudges.
 - Add template fallback for missing key, timeout, provider error, or validation failure.
 - Add guardrails that reject unsafe wording.
 - Log whether final phrasing came from the LLM or fallback templates.
@@ -28,6 +29,7 @@ The assignment allows LLM usage, but the implementation should show restraint. T
 ## Out of Scope
 
 - LLM-driven decisioning.
+- Re-phrasing existing active nudges on repeated reads.
 - Multi-turn conversations.
 - Retrieval pipelines or external health data sources.
 
@@ -79,6 +81,7 @@ Return only JSON with content and explanation.
 - Any failed validation should route to deterministic templates.
 - The system should remain fully usable without an API key.
 - The phrasing source should be visible to backend logs and audit events as `template` or `llm`.
+- Support-risk escalations should remain deterministic and should not introduce member-visible LLM phrasing.
 
 ## Implementation Notes
 
@@ -87,6 +90,8 @@ Return only JSON with content and explanation.
 - Avoid adding heavy abstraction for a single-provider prototype.
 - Make the fallback path easy to test.
 - Keep phrasing source separate from `generated_by`; decision ownership remains `rule_engine`.
+- Persist template copy first and only upgrade to `phrasing_source = llm` after a provider response passes validation.
+- Repeated `GET /nudge` reads should return the stored active nudge without triggering another provider call.
 
 ## Recommended Work Breakdown
 
@@ -110,6 +115,8 @@ Return only JSON with content and explanation.
 - Simulate provider failure or timeout and confirm graceful fallback.
 - Review prompt and validation logic for obvious health-safety gaps.
 - Confirm coach and audit views can still see whether the phrasing source was AI or fallback.
+- Confirm repeated reads of an existing active nudge do not trigger another provider call.
+- Confirm support-risk still returns `state: "escalated"` and remains coach-facing.
 
 ## Merge Checkpoint
 
