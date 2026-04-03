@@ -238,7 +238,8 @@ def get_coach_nudges(
     rows = conn.execute(
         """SELECT n.id, n.member_id, m.name AS member_name, n.nudge_type,
                   n.content, n.explanation, n.matched_reason, n.confidence,
-                  n.escalation_recommended, n.status, n.created_at,
+                  n.escalation_recommended, n.status, n.phrasing_source,
+                  n.created_at,
                   la.action_type AS latest_action_type
            FROM nudges n
            JOIN members m ON n.member_id = m.id
@@ -267,6 +268,7 @@ def get_coach_nudges(
                 escalation_recommended=bool(r["escalation_recommended"]),
                 status=r["status"],
                 latest_action=r["latest_action_type"],
+                phrasing_source=r["phrasing_source"] or "template",
                 created_at=r["created_at"],
             )
         )

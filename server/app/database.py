@@ -8,7 +8,7 @@ _SCHEMA_PATH = Path(__file__).resolve().parent / "schema.sql"
 
 
 def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, check_same_thread=False)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.row_factory = sqlite3.Row

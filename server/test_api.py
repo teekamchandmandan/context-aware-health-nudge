@@ -314,8 +314,12 @@ def test_coach_nudges():
     if data["items"]:
         item = data["items"][0]
         for field in ["nudge_id", "member_id", "member_name", "nudge_type",
-                       "explanation", "matched_reason", "confidence", "status", "created_at"]:
+                       "explanation", "matched_reason", "confidence", "status",
+                       "phrasing_source", "created_at"]:
             ok(f"item has '{field}'", field in item, f"missing {field}")
+        ok("phrasing_source is a string",
+           isinstance(item["phrasing_source"], str) and len(item["phrasing_source"]) > 0,
+           f"got {item.get('phrasing_source')!r}")
 
 
 def test_coach_nudges_limit():
