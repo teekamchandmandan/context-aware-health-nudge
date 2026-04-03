@@ -1,6 +1,7 @@
 """Decision engine: deterministic nudge selection with evaluators, fatigue, and escalation."""
 
 import json
+import logging
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
@@ -8,6 +9,7 @@ from uuid import uuid4
 from pydantic import BaseModel
 
 from app import phrasing
+from app.audit import log_structured_event, record_audit_event
 
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -54,6 +56,52 @@ def _ts(dt: datetime) -> str:
 
 def _id() -> str:
     return uuid4().hex
+
+
+def _record_nudge_generated(
+    conn: sqlite3.Connection,
+    member_id: str,
+    nudge_id: str,
+    candidate: NudgeCandidate,
+    *,
+    phrasing_source: str,
+    escalation_decision: bool,
+) -> None:
+    payload = {
+        "member_id": member_id,
+        "nudge_id": nudge_id,
+        "nudge_type": candidate.nudge_type,
+        "matched_reason": candidate.matched_reason,
+        "confidence": candidate.confidence,
+        "phrasing_source": phrasing_source,
+    }
+    record_audit_event(conn, "nudge_generated", "nudge", nudge_id, payload)
+    log_structured_event(
+        logging.INFO,
+        "nudge_generated",
+        {**payload, "escalation_decision": escalation_decision},
+    )
+
+
+def _record_escalation_created(
+    conn: sqlite3.Connection,
+    escalation_id: str,
+    *,
+    member_id: str,
+    nudge_id: str,
+    reason: str,
+    source: str,
+    status: str,
+) -> None:
+    payload = {
+        "member_id": member_id,
+        "nudge_id": nudge_id,
+        "reason": reason,
+        "source": source,
+        "status": status,
+    }
+    record_audit_event(conn, "escalation_created", "escalation", escalation_id, payload)
+    log_structured_event(logging.INFO, "escalation_created", {**payload, "escalation_id": escalation_id})
 
 
 # ── Evaluator Functions ──────────────────────────────────────────────────────
@@ -324,7 +372,24 @@ def create_nudge_from_candidate(
     """Persist a nudge (and escalation if needed). Returns result dict."""
     if candidate.confidence < CONFIDENCE_LOW_THRESHOLD or candidate.escalation_recommended:
         nudge_id = _create_nudge_row(conn, member_id, candidate, "escalated")
+        _record_nudge_generated(
+            conn,
+            member_id,
+            nudge_id,
+            candidate,
+            phrasing_source="template",
+            escalation_decision=True,
+        )
         esc_id = _create_escalation(conn, member_id, nudge_id, candidate.explanation_basis)
+        _record_escalation_created(
+            conn,
+            esc_id,
+            member_id=member_id,
+            nudge_id=nudge_id,
+            reason=candidate.explanation_basis,
+            source="rule_engine",
+            status="open",
+        )
         return {"state": "escalated", "nudge_id": nudge_id, "escalation_id": esc_id}
     else:
         nudge_id = _create_nudge_row(conn, member_id, candidate, "active")
@@ -341,6 +406,14 @@ def create_nudge_from_candidate(
             matched_reason=candidate.matched_reason,
             explanation_basis=candidate.explanation_basis,
             confidence=candidate.confidence,
+        )
+        _record_nudge_generated(
+            conn,
+            member_id,
+            nudge_id,
+            candidate,
+            phrasing_source=nudge["phrasing_source"],
+            escalation_decision=False,
         )
         return {"state": "active", "nudge": dict(nudge)}
 

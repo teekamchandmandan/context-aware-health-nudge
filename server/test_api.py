@@ -1,5 +1,6 @@
 """Phase 03 API contract tests using FastAPI TestClient."""
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -16,6 +17,7 @@ os.environ["OPENAI_API_KEY"] = ""
 import httpx
 from fastapi.testclient import TestClient
 
+from app.database import _connect
 from app.main import app
 from app.seed import reset_and_seed
 
@@ -41,6 +43,21 @@ def section(title: str):
 
 def seed():
     reset_and_seed()
+
+
+def latest_audit_payload(event_type: str, *, entity_id: str | None = None) -> dict | None:
+    conn = _connect()
+    try:
+        query = "SELECT payload_json FROM audit_events WHERE event_type = ?"
+        params: list[str] = [event_type]
+        if entity_id is not None:
+            query += " AND entity_id = ?"
+            params.append(entity_id)
+        query += " ORDER BY created_at DESC LIMIT 1"
+        row = conn.execute(query, tuple(params)).fetchone()
+        return json.loads(row["payload_json"]) if row else None
+    finally:
+        conn.close()
 
 
 # ── GET /api/members/{member_id}/nudge ───────────────────────────────────────
@@ -197,6 +214,13 @@ def test_action_act_now():
     ok("escalation_created is false", data["escalation_created"] is False)
     ok("recorded_at present", "recorded_at" in data)
 
+    audit_payload = latest_audit_payload("user_action", entity_id=nudge_id)
+    ok("user_action audit recorded", audit_payload is not None)
+    if audit_payload:
+        ok("audit action_type is act_now", audit_payload["action_type"] == "act_now")
+        ok("audit previous_status is active", audit_payload["previous_status"] == "active")
+        ok("audit new_status is acted", audit_payload["new_status"] == "acted")
+
 
 def test_action_dismiss():
     section("POST /action — dismiss transitions to dismissed")
@@ -207,6 +231,12 @@ def test_action_dismiss():
     r = client.post(f"/api/nudges/{nudge_id}/action", json={"action_type": "dismiss"})
     ok("status 200", r.status_code == 200)
     ok("nudge_status is dismissed", r.json()["nudge_status"] == "dismissed")
+
+    audit_payload = latest_audit_payload("user_action", entity_id=nudge_id)
+    ok("dismiss audit recorded", audit_payload is not None)
+    if audit_payload:
+        ok("audit action_type is dismiss", audit_payload["action_type"] == "dismiss")
+        ok("audit new_status is dismissed", audit_payload["new_status"] == "dismissed")
 
 
 def test_action_ask_for_help():
@@ -227,6 +257,18 @@ def test_action_ask_for_help():
     member_esc = [e for e in esc_items if e["source"] == "member_action"]
     ok("escalation visible in coach list", len(member_esc) > 0,
        f"got {len(member_esc)} member_action escalations")
+
+    action_audit = latest_audit_payload("user_action", entity_id=nudge_id)
+    ok("ask_for_help audit recorded", action_audit is not None)
+    if action_audit:
+        ok("audit action_type is ask_for_help", action_audit["action_type"] == "ask_for_help")
+        ok("audit new_status is escalated", action_audit["new_status"] == "escalated")
+
+    escalation_audit = latest_audit_payload("escalation_created")
+    ok("member_action escalation audit recorded", escalation_audit is not None)
+    if escalation_audit:
+        ok("escalation audit source is member_action", escalation_audit["source"] == "member_action")
+        ok("escalation audit nudge_id matches", escalation_audit["nudge_id"] == nudge_id)
 
 
 def test_action_409_terminal():

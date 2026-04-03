@@ -56,6 +56,22 @@ def fresh_db() -> sqlite3.Connection:
     return conn
 
 
+def latest_audit_payload(
+    conn: sqlite3.Connection,
+    event_type: str,
+    *,
+    entity_id: str | None = None,
+) -> dict | None:
+    query = "SELECT payload_json FROM audit_events WHERE event_type = ?"
+    params: list[str] = [event_type]
+    if entity_id is not None:
+        query += " AND entity_id = ?"
+        params.append(entity_id)
+    query += " ORDER BY created_at DESC LIMIT 1"
+    row = conn.execute(query, tuple(params)).fetchone()
+    return json.loads(row["payload_json"]) if row else None
+
+
 # ── Test 1: Scenario — member_meal_01 (meal goal mismatch) ──────────────────
 
 def test_meal_mismatch():
@@ -70,6 +86,14 @@ def test_meal_mismatch():
     ok("matched_reason is 'meal_goal_mismatch'", nudge.get("matched_reason") == "meal_goal_mismatch")
     ok("delivered_at is set", nudge.get("delivered_at") is not None)
     ok("status is 'active'", nudge.get("status") == "active")
+
+    audit_payload = latest_audit_payload(conn, "nudge_generated", entity_id=nudge.get("id"))
+    ok("nudge_generated audit recorded", audit_payload is not None)
+    if audit_payload:
+        ok("audit stores member_id", audit_payload["member_id"] == "member_meal_01")
+        ok("audit stores nudge_id", audit_payload["nudge_id"] == nudge.get("id"))
+        ok("audit stores confidence", audit_payload["confidence"] == 0.86)
+        ok("audit stores phrasing_source", audit_payload["phrasing_source"] == "template")
 
     conn.close()
 
@@ -161,6 +185,19 @@ def test_support_risk():
     ).fetchone()
     ok("nudge status is 'escalated'", nudge and nudge["status"] == "escalated")
     ok("nudge confidence is 0.42", nudge and nudge["confidence"] == 0.42)
+
+    nudge_audit = latest_audit_payload(conn, "nudge_generated", entity_id=result.get("nudge_id"))
+    ok("nudge_generated audit exists for escalated nudge", nudge_audit is not None)
+    if nudge_audit:
+        ok("escalated audit stores support_risk type", nudge_audit["nudge_type"] == "support_risk")
+        ok("escalated audit stores template phrasing", nudge_audit["phrasing_source"] == "template")
+
+    escalation_audit = latest_audit_payload(conn, "escalation_created", entity_id=result.get("escalation_id"))
+    ok("escalation_created audit recorded", escalation_audit is not None)
+    if escalation_audit:
+        ok("audit stores escalation source", escalation_audit["source"] == "rule_engine")
+        ok("audit stores escalation status", escalation_audit["status"] == "open")
+        ok("audit stores nudge_id", escalation_audit["nudge_id"] == result.get("nudge_id"))
 
     conn.close()
 
@@ -342,6 +379,11 @@ def test_llm_success_upgrade():
     ).fetchall()
     ok("one llm_call event recorded", len([e for e in events if e["event_type"] == "llm_call"]) == 1)
     ok("no llm_fallback event recorded", len([e for e in events if e["event_type"] == "llm_fallback"]) == 0)
+
+    nudge_audit = latest_audit_payload(conn, "nudge_generated", entity_id=nudge["id"])
+    ok("nudge_generated audit reflects llm phrasing", nudge_audit is not None)
+    if nudge_audit:
+        ok("audit phrasing_source upgraded to llm", nudge_audit["phrasing_source"] == "llm")
 
     conn.close()
 
