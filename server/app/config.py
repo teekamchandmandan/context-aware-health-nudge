@@ -14,5 +14,5 @@ PHRASING_TIMEOUT_SECONDS: float = float(os.getenv("PHRASING_TIMEOUT_SECONDS", "3
 
 
 def get_openai_api_key() -> str | None:
-	api_key = os.getenv("OPENAI_API_KEY")
-	return api_key.strip() if api_key else None
+    api_key = os.getenv("OPENAI_API_KEY")
+    return api_key.strip() if api_key else None

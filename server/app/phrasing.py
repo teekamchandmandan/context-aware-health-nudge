@@ -156,20 +156,7 @@ def maybe_apply_llm_phrasing(
         "UPDATE nudges SET content = ?, explanation = ?, phrasing_source = 'llm' WHERE id = ?",
         (phrasing.content, phrasing.explanation, nudge_id),
     )
-    _record_llm_call(conn, nudge_id, member_id, nudge_type, success=True, latency_ms=latency_ms)
-    log_structured_event(
-        logging.INFO,
-        "llm_call",
-        {
-            "member_id": member_id,
-            "nudge_id": nudge_id,
-            "nudge_type": nudge_type,
-            "provider": PROVIDER_NAME,
-            "success": True,
-            "latency_ms": latency_ms,
-            "phrasing_source": "llm",
-        },
-    )
+    _record_llm_call(conn, nudge_id, member_id, nudge_type, success=True, latency_ms=latency_ms, phrasing_source="llm")
     return _get_nudge(conn, nudge_id)
 
 
@@ -266,6 +253,7 @@ def _record_llm_call(
     *,
     success: bool,
     latency_ms: int,
+    phrasing_source: str | None = None,
 ) -> None:
     payload = {
         "member_id": member_id,
@@ -274,6 +262,8 @@ def _record_llm_call(
         "success": success,
         "latency_ms": latency_ms,
     }
+    if phrasing_source is not None:
+        payload["phrasing_source"] = phrasing_source
     record_audit_event(conn, "llm_call", "nudge", nudge_id, payload)
     log_structured_event(logging.INFO if success else logging.WARNING, "llm_call", {**payload, "nudge_id": nudge_id})
 
