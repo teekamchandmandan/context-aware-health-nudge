@@ -41,13 +41,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Context-Aware Health Nudge", lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if DEBUG:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 if DEBUG:
@@ -87,13 +88,24 @@ TERMINAL_STATUSES = {"acted", "dismissed", "escalated"}
 # ── GET /api/members/{member_id}/nudge ───────────────────────────────────────
 
 
-@app.get("/api/members/{member_id}/nudge")
+@app.get("/api/members/{member_id}/nudge", response_model_exclude_none=True)
 def get_member_nudge(
     member_id: Annotated[str, Path()],
     conn: DbDep,
 ) -> MemberNudgeResponse:
     member = _get_member(conn, member_id)
     member_ref = MemberRef(id=member["id"], name=member["name"])
+
+    # Idempotent: short-circuit if an open escalation already exists to avoid duplicates
+    existing_esc = conn.execute(
+        "SELECT id FROM escalations WHERE member_id = ? AND status = 'open' LIMIT 1",
+        (member_id,),
+    ).fetchone()
+    if existing_esc:
+        return MemberNudgeResponse(
+            state=NudgeState.escalated,
+            member=member_ref,
+        )
 
     result = evaluate_member(conn, member_id)
 
@@ -226,9 +238,15 @@ def get_coach_nudges(
     rows = conn.execute(
         """SELECT n.id, n.member_id, m.name AS member_name, n.nudge_type,
                   n.content, n.explanation, n.matched_reason, n.confidence,
-                  n.escalation_recommended, n.status, n.created_at
+                  n.escalation_recommended, n.status, n.created_at,
+                  la.action_type AS latest_action_type
            FROM nudges n
            JOIN members m ON n.member_id = m.id
+           LEFT JOIN (
+               SELECT nudge_id, action_type, MAX(created_at) AS max_created_at
+               FROM nudge_actions
+               GROUP BY nudge_id
+           ) la ON la.nudge_id = n.id
            ORDER BY n.created_at DESC
            LIMIT ?""",
         (limit,),
@@ -236,11 +254,6 @@ def get_coach_nudges(
 
     items: list[CoachNudgeItem] = []
     for r in rows:
-        # Latest action for this nudge
-        action_row = conn.execute(
-            "SELECT action_type FROM nudge_actions WHERE nudge_id = ? ORDER BY created_at DESC LIMIT 1",
-            (r["id"],),
-        ).fetchone()
         items.append(
             CoachNudgeItem(
                 nudge_id=r["id"],
@@ -253,7 +266,7 @@ def get_coach_nudges(
                 confidence=r["confidence"],
                 escalation_recommended=bool(r["escalation_recommended"]),
                 status=r["status"],
-                latest_action=action_row["action_type"] if action_row else None,
+                latest_action=r["latest_action_type"],
                 created_at=r["created_at"],
             )
         )

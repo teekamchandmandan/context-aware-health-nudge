@@ -1,6 +1,5 @@
 """Phase 03 API contract tests using FastAPI TestClient."""
 
-import json
 import os
 import sys
 from pathlib import Path
@@ -14,7 +13,6 @@ os.environ["DEBUG"] = "true"
 
 from fastapi.testclient import TestClient
 
-from app.database import init_db
 from app.main import app
 from app.seed import reset_and_seed
 
@@ -94,7 +92,7 @@ def test_member_nudge_escalated():
     ok("status 200", r.status_code == 200)
     data = r.json()
     ok("state is 'escalated'", data["state"] == "escalated", f"got {data['state']}")
-    ok("nudge is null", data["nudge"] is None)
+    ok("nudge is null", data.get("nudge") is None)
     ok("escalation_created is true", data.get("escalation_created") is True)
 
 
