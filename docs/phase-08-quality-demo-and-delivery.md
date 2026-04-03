@@ -27,7 +27,7 @@ For the full intended submission, assume all prior phases are complete. If a bra
 ## In Scope
 
 - Add focused automated tests for the most trust-sensitive backend behavior.
-- Run a manual walkthrough across the three seeded scenarios.
+- Run a manual walkthrough across the three scenarios using both seeded starting context and live member-submitted signals.
 - Finalize README setup and architecture guidance based on the actual implementation.
 - Write the 1-2 page product and technical note required by the assignment.
 - Add an explicit AI usage disclosure covering tools and boundaries.
@@ -41,7 +41,7 @@ For the full intended submission, assume all prior phases are complete. If a bra
 ## Deliverables
 
 - Automated backend tests for core decisioning and fallback behavior.
-- A manual verification checklist for member and coach flows.
+- A manual verification checklist for member and coach flows, including live signal capture.
 - Updated README with real setup and run instructions.
 - Product and technical note covering user problem, assumptions, metrics, risks, and rollout.
 - Clear AI disclosure matching the actual workflow used.
@@ -80,11 +80,13 @@ The final disclosure should state:
 - No matching signals produces no nudge.
 - `ask_for_help` creates an escalation.
 - Active nudge retrieval is idempotent.
+- Signal submission affects later nudge retrieval without creating duplicate active nudges.
 - LLM failure falls back to templates.
 
 ## Implementation Notes
 
 - Resist expanding scope late in the project.
+- Keep the demo honest: at least one meaningful member-facing state change should come from a fresh weight, mood, or meal log rather than a fully pre-seeded state.
 - If a gap is too large to finish well, document it rather than disguising it.
 - Keep the README reviewer-oriented and fast to run.
 - The product note should describe the system that exists, not a larger imagined platform.
@@ -93,7 +95,7 @@ The final disclosure should state:
 ## Recommended Work Breakdown
 
 1. Add the core automated tests.
-2. Run manual walkthroughs for the seeded scenarios.
+2. Run manual walkthroughs for the seeded starting contexts and live input paths.
 3. Update README with exact local setup instructions.
 4. Write the product and technical note.
 5. Add the final AI usage disclosure.
@@ -102,6 +104,7 @@ The final disclosure should state:
 
 - The most important backend behavior is covered by focused tests.
 - A reviewer can run the project locally using the README alone.
+- A reviewer can trigger at least one nudge or resolution through live member input after reset.
 - The submission includes the required product and technical note.
 - AI usage is disclosed clearly and accurately.
 - The final repo remains a coherent end-to-end vertical slice.
@@ -110,7 +113,7 @@ The final disclosure should state:
 ## Verification
 
 - Run the automated test suite.
-- Walk through each seeded scenario from member view to coach visibility.
+- Walk through each scenario from member view to coach visibility, including at least one fresh signal submission.
 - Review the README from a clean-start perspective and remove any missing steps.
 - Confirm all assignment deliverables are present in the repository.
 

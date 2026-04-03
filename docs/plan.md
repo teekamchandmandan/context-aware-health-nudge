@@ -4,6 +4,8 @@
 
 This project will deliver the Digbi Health assignment as a focused end-to-end vertical slice. The slice should show a personalized nudge, explain why it appeared, handle confidence explicitly, escalate safely to a coach when needed, expose that activity in a coach view, and keep a clear audit trail. LLM usage is allowed only as a phrasing layer, never as the source of truth for decisioning.
 
+Member profiles and baseline history may be seeded, but the visible nudge flow should still respond to fresh member-entered signals during the demo.
+
 The scope is intentionally narrow. The goal is a coherent product slice built well, not the start of a broad health platform.
 
 ## 2. Delivery Structure
@@ -25,15 +27,16 @@ This document is the high-level decision record. The phase files hold execution 
 
 The implementation will stay centered on one member-to-coach workflow.
 
-| In scope                                              | Out of scope                  |
-| ----------------------------------------------------- | ----------------------------- |
-| One active nudge per member with explanation          | Auth, multi-channel delivery  |
-| Three actions: act now, dismiss, ask for help         | Real health data integrations |
-| Escalation to coach on low confidence or ask-for-help | Coach assignment workflows    |
-| Coach view with recent nudges and open escalations    | Analytics dashboards          |
-| LLM-enhanced phrasing with deterministic fallback     | ML-based confidence scoring   |
-| Audit trail for key system events                     | Compliance-grade infra        |
-| SQLite, local setup, no Docker                        | Configurable rules UI         |
+| In scope                                               | Out of scope                          |
+| ------------------------------------------------------ | ------------------------------------- |
+| One active nudge per member with explanation           | Auth, multi-channel delivery          |
+| Lightweight signal logging for meals, weight, and mood | Broad dashboard or profile management |
+| Three actions: act now, dismiss, ask for help          | Real health data integrations         |
+| Escalation to coach on low confidence or ask-for-help  | Coach assignment workflows            |
+| Coach view with recent nudges and open escalations     | Analytics dashboards                  |
+| LLM-enhanced phrasing with deterministic fallback      | ML-based confidence scoring           |
+| Audit trail for key system events                      | Compliance-grade infra                |
+| SQLite, local setup, no Docker                         | Configurable rules UI                 |
 
 ## 4. Product Scenarios
 
@@ -41,15 +44,15 @@ The product will support exactly three scenarios.
 
 ### Scenario 1: Meal goal mismatch
 
-If a member logs a high-carb meal while their goal is low-carb, the system suggests a lighter next meal. This is a high-confidence nudge because the rule match is direct and easy to explain.
+If a member logs a meal through the member experience and it is inconsistent with their goal, the system suggests a lighter next meal. This is a high-confidence nudge because the rule match is direct and easy to explain.
 
 ### Scenario 2: Missed weight logging
 
-If a member has not logged weight for several days, the system sends a gentle reminder to check in. The signal is clear, but the phrasing should stay soft.
+If a member has not logged weight for several days, the system sends a gentle reminder to check in. The signal is clear, but the phrasing should stay soft. A fresh weight log should clear the need for another reminder on the next retrieval so the flow feels responsive rather than pre-baked.
 
 ### Scenario 3: Support risk
 
-If signals indicate low mood combined with repeated dismissals, or if the member explicitly asks for help, the system escalates the case to a coach. This is the path where the product should defer to a human rather than continue automated nudging.
+If signals indicate low mood combined with repeated dismissals, or if the member explicitly asks for help, the system escalates the case to a coach. Mood input may come from a simple slider with an optional note, but the escalation decision should remain rule-based. This is the path where the product should defer to a human rather than continue automated nudging.
 
 ## 5. Architecture and Stack
 
@@ -170,7 +173,7 @@ The API should stay compact and align directly with the product flow.
 | POST   | `/api/nudges/{nudge_id}/action`    | Record act_now, dismiss, or ask_for_help |
 | GET    | `/api/coach/nudges`                | Return recent nudges for coach view      |
 | GET    | `/api/coach/escalations`           | Return open escalations queue            |
-| POST   | `/api/members/{member_id}/signals` | Seed or demo helper                      |
+| POST   | `/api/members/{member_id}/signals` | Live member signal logging               |
 | POST   | `/debug/reset-seed`                | Dev-only: reset and reseed the database  |
 
 The `ask_for_help` action automatically creates an escalation so the member path and coach path stay connected.
@@ -185,9 +188,11 @@ Default API behavior:
 
 ### Member experience
 
+- Provide a compact "log an update" area for weight, mood, and meal entry so the demo includes fresh member interaction.
 - Show one active nudge card at a time.
 - Include a short explanation such as "Why am I seeing this?" so the recommendation feels grounded in member context.
 - Offer exactly three actions: Act now, Dismiss, and Ask for help.
+- Meal logging may include optional photo capture, but the page must remain usable with structured inputs alone.
 
 ### Coach experience
 
@@ -204,11 +209,11 @@ The system should persist a clear audit trail for the key events in the workflow
 - Persisted audit events include `nudge_generated`, `user_action`, `escalation_created`, `llm_call`, and `llm_fallback`.
 - Structured backend logs should capture member ID, nudge ID, confidence, matched reason, escalation decision, and whether final phrasing came from a template or the LLM.
 
-The seed dataset should let a reviewer exercise the core flows immediately:
+The seed dataset should give a reviewer believable starting context while still leaving the visible product interactions to live signal capture where possible:
 
-- One member for the meal mismatch case
+- One member with low-carb goal context for the meal-guidance path
 - One member for the missed weight logging case
-- One member for the support-risk or escalation case
+- One member for the support-risk or escalation case with enough prior history to exercise coach review
 - At least one previously acted nudge and one previously dismissed nudge
 
 ## 12. Quality and Delivery
@@ -227,7 +232,7 @@ Testing should focus on the parts of the system that most directly affect trust.
 
 ### Manual verification
 
-Walk all three scenarios end to end through both the member view and the coach view.
+Walk all three scenarios end to end through both the member view and the coach view, including at least one fresh signal submission for weight, mood, or meal logging.
 
 ### Implementation order
 

@@ -4,6 +4,8 @@
 
 Establish the project baseline: repository structure, backend bootstrap, SQLite persistence, domain schema, and seed data for the three planned scenarios.
 
+Seed only the baseline context needed for an interactive demo. Later phases should let fresh member-entered signals drive the visible nudge changes.
+
 ## Suggested Branch
 
 `phase/01-foundation-and-data`
@@ -34,7 +36,7 @@ None. This is the starting point.
 - Set up a FastAPI application shell with local run instructions.
 - Add SQLite initialization and schema creation for the six planned tables.
 - Define the core domain entities: members, signals, nudges, nudge actions, escalations, and audit events.
-- Add seed data for the meal mismatch, missed weight logging, and support-risk scenarios.
+- Add seed data for the baseline member context and minimum prior history needed for the meal mismatch, missed weight logging, and support-risk scenarios.
 - Add one previously acted nudge and one previously dismissed nudge so later phases can validate history-aware logic.
 - Scaffold the client directory with Vite + React + TypeScript + Tailwind CSS v4 so Phase 04 can begin UI work without setup overhead.
 - Add a dev-only `POST /debug/reset-seed` endpoint (guarded by `DEBUG=true` env var) to support deterministic demo resets.
@@ -50,7 +52,7 @@ None. This is the starting point.
 
 - Backend app entrypoint that starts locally.
 - SQLite schema creation mechanism.
-- Seed workflow that can repopulate the local database deterministically.
+- Seed workflow that can repopulate the local database deterministically without pre-baking the entire visible member journey.
 - Initial data access conventions for timestamps, JSON payload fields, and status enums.
 - Brief setup notes so later phases build on the schema instead of bypassing it.
 
@@ -82,17 +84,17 @@ The first branch should establish a minimal but durable layout.
 
 ## Seed Fixtures
 
-The seed set should use stable demo members and enough chronology to support later tests.
+The seed set should use stable demo members, a small amount of historical context, and enough chronology to support later tests while leaving room for fresh member-entered signals during the demo.
 
-| Member ID           | Goal          | Purpose                 | Minimum seeded signals                                                                       |
-| ------------------- | ------------- | ----------------------- | -------------------------------------------------------------------------------------------- |
-| `member_meal_01`    | `low_carb`    | Meal mismatch scenario  | One `meal_logged` signal in the last 24 hours with `carbs_g >= 60`                           |
-| `member_weight_01`  | `weight_loss` | Missing weight scenario | No `weight_logged` signal in the last 4 full days                                            |
-| `member_support_01` | `balanced`    | Support-risk scenario   | One `mood_logged` signal with `mood: low` in the last 3 days and two recent dismissed nudges |
+| Member ID           | Goal          | Purpose                 | Minimum seeded context                                                                                                          |
+| ------------------- | ------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `member_meal_01`    | `low_carb`    | Meal mismatch scenario  | Goal context and any optional baseline history needed to trigger the scenario from a fresh `meal_logged` signal during the demo |
+| `member_weight_01`  | `weight_loss` | Missing weight scenario | No `weight_logged` signal in the last 4 full days                                                                               |
+| `member_support_01` | `balanced`    | Support-risk scenario   | One `mood_logged` signal with `mood: low` in the last 3 days and two recent dismissed nudges                                    |
 
 Example payload shapes:
 
-- `meal_logged`: `{ "meal_type": "lunch", "carbs_g": 72, "protein_g": 18 }`
+- `meal_logged`: `{ "meal_type": "lunch", "carbs_g": 72, "protein_g": 18, "meal_tag": "high_carb", "photo_attached": true }`
 - `weight_logged`: `{ "weight_lb": 182.4 }`
 - `mood_logged`: `{ "mood": "low", "note": "Feeling off plan this week" }`
 
@@ -103,6 +105,7 @@ Example payload shapes:
 - The `POST /debug/reset-seed` endpoint is registered only when the `DEBUG` environment variable is set to `true`. It is not mounted in non-debug mode.
 - Use stable seed member identities so frontend and API work can reliably reference them.
 - Make schema creation idempotent so branch rebases and reruns stay low-friction.
+- Seed enough baseline context to make the demo credible, but leave room for later phases to generate visible nudges from fresh member-entered signals.
 - Add only the minimum application structure needed to support later phases cleanly.
 - Do not add migration tooling yet unless schema evolution becomes hard to reason about. A bootstrap script is enough for this phase.
 
@@ -110,7 +113,7 @@ Example payload shapes:
 
 1. Create the backend application skeleton and local configuration conventions.
 2. Define the SQLite schema and initialize the database on first run.
-3. Add seed data covering all three core assignment scenarios.
+3. Add seed data covering baseline context for all three core assignment scenarios.
 4. Verify the data can be queried and reset reliably.
 5. Document the shape of seeded members and signals for future phases.
 
@@ -118,7 +121,7 @@ Example payload shapes:
 
 - A local developer can start the backend without manual database setup.
 - The database includes all six planned tables with the fields defined in the project plan.
-- Seed data covers the meal mismatch, missed weight logging, and support-risk cases.
+- Seed data covers the meal mismatch, missed weight logging, and support-risk cases through baseline context or historical data.
 - Seed data includes historical nudge actions so fatigue, dismissal, and escalation behavior can be tested later.
 - The repository has a clear implementation starting point without forcing client UI or AI work into this branch.
 - Stable seeded member IDs and enum values are documented so later branches do not invent alternatives.
@@ -127,7 +130,7 @@ Example payload shapes:
 
 - Start the backend and confirm database initialization succeeds.
 - Reset and reseed the database at least once to confirm deterministic setup.
-- Inspect the seeded rows to confirm all core scenarios are present.
+- Inspect the seeded rows to confirm all core scenarios are present or can be exercised from the seeded baseline.
 - Confirm no decision logic or UI behavior is embedded in this phase.
 - Confirm the seed set includes at least one acted nudge and two dismissed nudges tied to the support-risk member.
 

@@ -2,7 +2,7 @@
 
 ## Objective
 
-Implement the member-facing flow that shows one personalized nudge, explains why it appeared, and lets the member act now, dismiss, or ask for help.
+Implement the member-facing flow that shows one personalized nudge, explains why it appeared, lets the member act now, dismiss, or ask for help, and allows lightweight logging of fresh member signals.
 
 ## Suggested Branch
 
@@ -21,6 +21,7 @@ This is the primary assignment experience. It should feel clear and trustworthy 
 
 - Build the member route and page shell.
 - Fetch and display the current active nudge.
+- Add compact controls for logging weight, mood, and meal updates.
 - Show the nudge content and a short explanation for why it appeared.
 - Provide the three required actions: act now, dismiss, and ask for help.
 - Handle loading, empty, success, and error states.
@@ -35,24 +36,28 @@ This is the primary assignment experience. It should feel clear and trustworthy 
 ## Deliverables
 
 - Member page wired to the nudge API.
+- Member page wired to the signal intake API for live input.
 - A nudge card component or equivalent view structure.
 - Action handling that updates the UI based on backend responses.
 - Empty state for members who do not currently need a nudge.
-- A simple demo path for reviewing the three seeded scenarios.
+- A simple demo path for reviewing the three demo scenarios.
 
 ## Route and Demo Convention
 
 - Use a single member route such as `/member?memberId=member_meal_01`.
 - Provide a lightweight seeded-member switcher at the top of the page so reviewers can move between scenarios without auth.
 - Default to the meal scenario member on first load.
+- Make it easy to trigger or resolve at least one scenario through fresh member input instead of relying only on seeded outcomes.
 
 ## UX Requirements
 
 - Keep the page focused on one active nudge.
+- Keep signal logging lightweight and adjacent to the nudge card rather than turning the page into a broad dashboard.
 - Use plain, calm language that avoids diagnosis or overclaiming.
 - Make the explanation legible and visibly separate from the main recommendation.
 - Reflect action results immediately so the user is not left uncertain about what happened.
 - Prefer a centered card layout with the recommendation, explanation, and three actions visible without scrolling on a laptop.
+- Provide a reliable structured fallback for meal logging even if photo capture is available.
 
 ## Required UI States
 
@@ -74,6 +79,11 @@ Suggested state copy is intentionally simple:
 +--------------------------------------------------+
 | Member selector                                  |
 |                                                  |
+| Quick log an update                              |
+| - weight input                                   |
+| - mood slider + optional note                    |
+| - meal entry + optional photo                    |
+|                                                  |
 |  Personalized nudge card                         |
 |  - content                                       |
 |  - Why am I seeing this? explanation             |
@@ -88,30 +98,36 @@ Suggested state copy is intentionally simple:
 - Do not overbuild state management for a single-page flow.
 - Design for trust and clarity over visual complexity.
 - The page should be usable with deterministic template phrasing before LLM polish lands.
+- Keep signal submission and nudge action handling on the same page so the interaction loop feels immediate.
 - Keep the member flow resilient to empty or low-confidence states returned by the backend.
+- If meal photo capture is included, show a lightweight local preview and keep the structured fallback path available.
 - Prefer server-confirmed actions over optimistic updates because trust matters more than speed in this flow.
 
 ## Recommended Work Breakdown
 
 1. Create the member route and page structure.
 2. Add data fetching for the active nudge.
-3. Build the nudge card and explanation presentation.
-4. Wire the three actions to the action endpoint.
-5. Add empty, loading, and error states.
-6. Verify the three seeded scenarios manually.
+3. Add signal logging controls for weight, mood, and meals.
+4. Build the nudge card and explanation presentation.
+5. Wire the three actions to the action endpoint.
+6. Add empty, loading, and error states.
+7. Verify the three demo scenarios and at least one fresh input path manually.
 
 ## Acceptance Criteria
 
 - The member page shows at most one active nudge at a time.
+- A reviewer can log at least one new signal and see the member state update from live interaction.
 - The explanation for why the nudge appeared is visible and understandable.
 - All three required actions work end to end.
 - The UI handles no-nudge and error states gracefully.
 - A reviewer can exercise each seeded scenario without auth.
 - Demo member switching is visible and does not require editing the URL manually.
+- Meal logging remains usable through structured inputs even if photo capture is unavailable.
 
 ## Verification
 
 - Load the member page for each seeded member and confirm the expected state.
+- Submit a fresh weight, mood, or meal signal and confirm the next nudge fetch reflects the new context.
 - Trigger each action type and confirm the page updates correctly.
 - Verify `ask_for_help` produces a visible confirmation even before coach review is opened.
 - Confirm no extra product surface has been added beyond the required member flow.

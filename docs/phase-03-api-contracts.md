@@ -2,7 +2,7 @@
 
 ## Objective
 
-Define and implement the backend API surface that exposes member decisions, records member actions, and supports the coach workflow.
+Define and implement the backend API surface that exposes member decisions, records member actions, supports the coach workflow, and accepts live member signals.
 
 ## Suggested Branch
 
@@ -23,7 +23,7 @@ Stable contracts let frontend work proceed without guessing at backend behavior.
 - Implement `POST /api/nudges/{nudge_id}/action`.
 - Implement `GET /api/coach/nudges`.
 - Implement `GET /api/coach/escalations`.
-- Implement `POST /api/members/{member_id}/signals` for demo or seed extension.
+- Implement `POST /api/members/{member_id}/signals` for live member logging and demo extension.
 - Define request and response models with explicit types and defaults.
 - Return clear error behavior for missing members, invalid actions, and unavailable nudges.
 
@@ -38,6 +38,7 @@ Stable contracts let frontend work proceed without guessing at backend behavior.
 - FastAPI route handlers for all planned endpoints.
 - Pydantic models or equivalent request and response schemas.
 - Side effects for action recording, status transitions, and escalation creation on `ask_for_help`.
+- Signal intake that supports live weight, mood, and meal logging from the member experience.
 - API responses that include the fields later phases need for member and coach views.
 
 ## API Conventions
@@ -119,9 +120,12 @@ Empty and escalated cases should stay explicit instead of relying on `204`:
 
 - Allowed `signal_type` values are `meal_logged`, `weight_logged`, and `mood_logged`.
 - Minimum payload fields:
-  - `meal_logged`: `meal_type`, `carbs_g`
+  - `meal_logged`: `meal_type` and at least one of `carbs_g` or `meal_tag`
   - `weight_logged`: `weight_lb`
   - `mood_logged`: `mood`
+- Optional payload fields:
+  - `meal_logged`: `protein_g`, `photo_attached`
+  - `mood_logged`: `note`
 - Reject unknown signal types or missing required payload fields with `422`.
 
 ## API Responsibilities
@@ -153,14 +157,17 @@ Empty and escalated cases should stay explicit instead of relying on `204`:
 
 ### `POST /api/members/{member_id}/signals`
 
-- Accept a mocked signal payload for demo or scenario extension.
+- Accept live member-entered signal payloads from the member experience.
+- For meal logs, prefer deterministic structured fields first and treat photo capture as optional prototype metadata.
 - Persist the signal and return the stored record.
+- Let the client refetch `GET /api/members/{member_id}/nudge` after signal submission so the decisioning state stays explicit.
 
 ## Implementation Notes
 
 - Make active nudge retrieval idempotent from the API boundary, not just inside the engine.
 - Keep action handling strict so invalid transitions fail clearly.
 - Preserve enough response detail that frontend branches do not need extra endpoints.
+- Keep signal intake simple; for the prototype, meal photo handling can stay as lightweight metadata in `payload_json` rather than requiring a separate media service.
 - Add simple filtering or ordering only if it does not complicate the API surface materially.
 - Repeated `GET /nudge` calls should return the same active nudge until it reaches a terminal state.
 
@@ -177,6 +184,7 @@ Empty and escalated cases should stay explicit instead of relying on `204`:
 - Every endpoint listed in the project plan exists and returns predictable structured responses.
 - The nudge endpoint is idempotent for repeated reads.
 - `ask_for_help` creates an escalation automatically.
+- Signal intake supports the live member logging flows used in the demo.
 - Coach endpoints expose enough context to avoid extra follow-up API work.
 - Error responses are clear enough for UI handling.
 - Empty and escalated member states are explicit and frontend-safe.
@@ -187,6 +195,7 @@ Empty and escalated cases should stay explicit instead of relying on `204`:
 - Verify repeated `GET /nudge` calls do not create duplicate active nudges.
 - Verify invalid action types are rejected.
 - Verify `ask_for_help` creates an escalation visible in the coach endpoint.
+- Call the signal intake endpoint for each supported signal type and confirm a follow-up `GET /nudge` reflects the new context.
 
 ## Merge Checkpoint
 
