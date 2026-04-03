@@ -1,5 +1,7 @@
 import json
+import logging
 import sqlite3
+import sys
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Annotated
@@ -8,6 +10,7 @@ from uuid import uuid4
 from fastapi import Depends, FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.audit import log_structured_event, record_audit_event
 from app.config import DEBUG
 from app.database import get_db, init_db
 from app.engine import evaluate_member
@@ -35,6 +38,7 @@ def _ts() -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout, force=True)
     init_db()
     yield
 
@@ -152,8 +156,9 @@ def post_nudge_action(
     conn: DbDep,
 ) -> ActionResponse:
     nudge = _get_nudge(conn, nudge_id)
+    previous_status = nudge["status"]
 
-    if nudge["status"] in TERMINAL_STATUSES:
+    if previous_status in TERMINAL_STATUSES:
         raise HTTPException(status_code=409, detail="Nudge is already in a terminal state")
 
     action_type = body.action_type.value
@@ -175,16 +180,41 @@ def post_nudge_action(
         (action_id, nudge_id, action_type, None, now),
     )
 
-    # ask_for_help side-effect: create escalation
     escalation_created = False
+    user_action_payload = {
+        "member_id": nudge["member_id"],
+        "nudge_id": nudge_id,
+        "action_type": action_type,
+        "previous_status": previous_status,
+        "new_status": new_status,
+    }
+    record_audit_event(conn, "user_action", "nudge", nudge_id, user_action_payload)
+
+    # ask_for_help side-effect: create escalation
     if action_type == "ask_for_help":
         esc_id = uuid4().hex
+        reason = "Member requested help"
         conn.execute(
             """INSERT INTO escalations (id, nudge_id, member_id, reason, source, status, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (esc_id, nudge_id, nudge["member_id"], "Member requested help", "member_action", "open", now),
+            (esc_id, nudge_id, nudge["member_id"], reason, "member_action", "open", now),
         )
+        escalation_payload = {
+            "member_id": nudge["member_id"],
+            "nudge_id": nudge_id,
+            "reason": reason,
+            "source": "member_action",
+            "status": "open",
+        }
+        record_audit_event(conn, "escalation_created", "escalation", esc_id, escalation_payload)
+        log_structured_event(logging.INFO, "escalation_created", {**escalation_payload, "escalation_id": esc_id})
         escalation_created = True
+
+    log_structured_event(
+        logging.INFO,
+        "user_action",
+        {**user_action_payload, "escalation_created": escalation_created},
+    )
 
     conn.commit()
 
