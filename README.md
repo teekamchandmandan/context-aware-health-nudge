@@ -18,7 +18,7 @@ Keep this README as the reviewer-facing entrypoint, not a second planning docume
 
 ## Current Status
 
-The repository includes the Phase 01 baseline: a FastAPI backend shell, SQLite schema bootstrap, deterministic seed workflow, and a Vite + React + Tailwind client scaffold. Later phases in `docs/` describe the member flow, coach flow, decision engine, and delivery work that still needs to be built.
+The repository now includes the core vertical slice: deterministic decisioning, member and coach flows, SQLite persistence, seeded demo scenarios, and optional LLM-assisted phrasing with deterministic fallback. Later phases in `docs/` still describe the remaining observability and delivery hardening work.
 
 ## Planned Architecture
 
@@ -60,7 +60,7 @@ Review and implement the phase specs in sequence:
 
 ## Local Setup
 
-Phase 01 provides a runnable backend foundation and a client scaffold.
+The project runs locally with or without an OpenAI API key. If `OPENAI_API_KEY` is not set, the backend uses deterministic template phrasing by default.
 
 ### Backend
 
@@ -72,26 +72,71 @@ cd server
 pip install -r requirements.txt
 ```
 
-3. Seed the local database:
+3. Create your local env file:
+
+```bash
+cp .env.example .env
+```
+
+4. Edit `server/.env` and add `OPENAI_API_KEY` if you want LLM phrasing enabled.
+
+5. Seed the local database:
 
 ```bash
 python -m app.seed
 ```
 
-4. Start the API:
+6. Start the API:
 
 ```bash
-DEBUG=true uvicorn app.main:app --reload
+uvicorn app.main:app --reload
 ```
 
-5. Verify the baseline endpoints:
+7. Verify the key endpoints:
 
 ```bash
 curl http://127.0.0.1:8000/health
 curl -X POST http://127.0.0.1:8000/debug/reset-seed
+curl http://127.0.0.1:8000/api/members/member_meal_01/nudge
+curl http://127.0.0.1:8000/api/coach/nudges
 ```
 
-The backend currently exposes only the Phase 01 shell endpoints: `GET /health` and the dev-only `POST /debug/reset-seed`.
+Without an API key, `GET /api/members/{member_id}/nudge` returns template phrasing. With a valid key, newly created active nudges may be upgraded to `phrasing_source = "llm"` after validation. Existing active nudges are returned as-is and are not re-phrased on repeated reads.
+
+### Environment Variables
+
+Server variables loaded from `server/.env`:
+
+| Variable                   | Default           | Purpose                                                                    |
+| -------------------------- | ----------------- | -------------------------------------------------------------------------- |
+| `DEBUG`                    | `false`           | Enables local-only debug behavior such as `POST /debug/reset-seed`.        |
+| `OPENAI_API_KEY`           | unset             | Enables optional LLM phrasing for newly created active nudges.             |
+| `OPENAI_MODEL`             | `gpt-4.1-mini`    | Selects the OpenAI model used by the phrasing layer.                       |
+| `PHRASING_TIMEOUT_SECONDS` | `3`               | Sets the timeout for provider calls before deterministic fallback.         |
+| `DATABASE_PATH`            | `server/nudge.db` | Overrides the SQLite database path. Prefer an absolute path if customized. |
+
+Client variables:
+
+| Variable       | Default                 | Purpose                                   |
+| -------------- | ----------------------- | ----------------------------------------- |
+| `VITE_API_URL` | `http://localhost:8000` | Backend base URL used by the Vite client. |
+
+The client already includes committed local-development defaults in `client/.env.development`.
+
+For most users:
+
+1. Leave `client/.env.development` alone.
+2. If you need a different backend URL, copy `client/.env.example` to `client/.env.local`.
+3. Edit `client/.env.local` with your own `VITE_API_URL`.
+
+Example:
+
+```bash
+cd client
+cp .env.example .env.local
+```
+
+This works with Vite as expected: `client/.env.development` provides the committed default for local development, and `client/.env.local` is the right per-developer override file. The local file is ignored by git, so newcomers can safely add their own URL without modifying a committed file.
 
 ### Client
 
@@ -101,7 +146,7 @@ npm install
 npm run dev
 ```
 
-The client is still the Phase 01 scaffold. Member and coach product surfaces land in later phases.
+The client includes both member and coach surfaces. The member card shows phrasing provenance, and the coach dashboard exposes phrasing source alongside confidence and matched reason.
 
 ### Planning Docs
 

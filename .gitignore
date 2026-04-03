@@ -25,3 +25,5 @@ dist/
 # Env
 .env
 .env.local
+server/.env
+client/.env.local
