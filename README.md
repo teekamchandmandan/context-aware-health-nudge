@@ -18,7 +18,7 @@ Keep this README as the reviewer-facing entrypoint, not a second planning docume
 
 ## Current Status
 
-The repository now includes the core vertical slice: deterministic decisioning, member and coach flows, SQLite persistence, seeded demo scenarios, and optional LLM-assisted phrasing with deterministic fallback. Later phases in `docs/` still describe the remaining observability and delivery hardening work.
+The repository now includes the core vertical slice: deterministic decisioning, member and coach flows, SQLite persistence, seeded demo scenarios, and optional LLM-assisted phrasing with deterministic fallback. The remaining docs now include a dedicated UI/UX redesign phase before the final delivery pass.
 
 ## Planned Architecture
 
@@ -43,7 +43,7 @@ The planned stack is a Vite + React SPA on the client and FastAPI + SQLite on th
 - `client/`: Vite + React + Tailwind scaffold
 - `docs/assignment.md`: original assignment brief
 - `docs/plan.md`: project plan and decision record
-- `docs/phase-01-foundation-and-data.md` through `docs/phase-08-quality-demo-and-delivery.md`: branch-friendly implementation specs
+- `docs/phase-01-foundation-and-data.md` through `docs/phase-09-quality-demo-and-delivery.md`: branch-friendly implementation specs
 
 ## Implementation Order
 
@@ -56,7 +56,8 @@ Review and implement the phase specs in sequence:
 5. `docs/phase-05-coach-experience.md`
 6. `docs/phase-06-llm-safety-and-phrasing.md`
 7. `docs/phase-07-observability-and-audit.md`
-8. `docs/phase-08-quality-demo-and-delivery.md`
+8. `docs/phase-08-ui-ux-redesign.md`
+9. `docs/phase-09-quality-demo-and-delivery.md`
 
 ## Local Setup
 

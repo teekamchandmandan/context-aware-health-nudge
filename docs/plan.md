@@ -19,7 +19,8 @@ Implementation should follow the phase specs in the `docs` folder:
 - [phase-05-coach-experience.md](./phase-05-coach-experience.md)
 - [phase-06-llm-safety-and-phrasing.md](./phase-06-llm-safety-and-phrasing.md)
 - [phase-07-observability-and-audit.md](./phase-07-observability-and-audit.md)
-- [phase-08-quality-demo-and-delivery.md](./phase-08-quality-demo-and-delivery.md)
+- [phase-08-ui-ux-redesign.md](./phase-08-ui-ux-redesign.md)
+- [phase-09-quality-demo-and-delivery.md](./phase-09-quality-demo-and-delivery.md)
 
 This document is the high-level decision record. The phase files hold execution detail and branch boundaries.
 
@@ -243,6 +244,7 @@ Walk all three scenarios end to end through both the member view and the coach v
 | **LLM layer**        | LLM phrasing service, fallback, guardrails, audit logging                  |
 | **Member flow**      | Member page, action handling, frontend-to-backend wiring                   |
 | **Coach flow**       | Recent nudges view, escalation queue                                       |
+| **UI/UX redesign**   | Shared frontend foundation, member experience polish, coach review polish  |
 | **Quality and docs** | Focused tests, README, product and technical note                          |
 
 ### Documentation deliverables

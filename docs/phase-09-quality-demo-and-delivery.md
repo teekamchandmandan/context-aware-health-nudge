@@ -1,4 +1,4 @@
-# Phase 08: Quality, Demo, and Delivery
+# Phase 09: Quality, Demo, and Delivery
 
 ## Objective
 
@@ -6,11 +6,11 @@ Close the loop on the assignment by adding focused tests, validating the end-to-
 
 ## Suggested Branch
 
-`phase/08-quality-demo-and-delivery`
+`phase/09-quality-demo-and-delivery`
 
 ## Why This Phase Exists
 
-The last branch should improve trust and submission quality rather than broaden scope. It should prove that the vertical slice works and is documented clearly.
+The last branch should improve trust and submission quality rather than broaden scope. It should prove that the vertical slice works, the redesigned UX holds up in practice, and the repository is documented clearly.
 
 ## Dependencies
 
@@ -21,6 +21,7 @@ The last branch should improve trust and submission quality rather than broaden 
 - [phase-05-coach-experience.md](./phase-05-coach-experience.md)
 - [phase-06-llm-safety-and-phrasing.md](./phase-06-llm-safety-and-phrasing.md)
 - [phase-07-observability-and-audit.md](./phase-07-observability-and-audit.md)
+- [phase-08-ui-ux-redesign.md](./phase-08-ui-ux-redesign.md)
 
 For the full intended submission, assume all prior phases are complete. If a branch is tested in isolation, document the missing dependencies explicitly instead of mocking hidden behavior.
 
@@ -31,6 +32,7 @@ For the full intended submission, assume all prior phases are complete. If a bra
 - Finalize README setup and architecture guidance based on the actual implementation.
 - Write the 1-2 page product and technical note required by the assignment.
 - Add an explicit AI usage disclosure covering tools and boundaries.
+- Verify that the redesigned UI from Phase 08 remains coherent, responsive, and demoable across the core flows.
 
 ## Out of Scope
 
@@ -90,21 +92,23 @@ The final disclosure should state:
 - If a gap is too large to finish well, document it rather than disguising it.
 - Keep the README reviewer-oriented and fast to run.
 - The product note should describe the system that exists, not a larger imagined platform.
-- Manual verification should cover at least one pass through each seeded scenario and one explicit fallback case.
+- Manual verification should cover at least one pass through each seeded scenario, one explicit fallback case, and one pass through the redesigned member and coach surfaces.
 
 ## Recommended Work Breakdown
 
 1. Add the core automated tests.
 2. Run manual walkthroughs for the seeded starting contexts and live input paths.
-3. Update README with exact local setup instructions.
-4. Write the product and technical note.
-5. Add the final AI usage disclosure.
+3. Verify the redesigned UI across the required member and coach states.
+4. Update README with exact local setup instructions.
+5. Write the product and technical note.
+6. Add the final AI usage disclosure.
 
 ## Acceptance Criteria
 
 - The most important backend behavior is covered by focused tests.
 - A reviewer can run the project locally using the README alone.
 - A reviewer can trigger at least one nudge or resolution through live member input after reset.
+- The redesigned member and coach surfaces remain coherent during end-to-end walkthroughs.
 - The submission includes the required product and technical note.
 - AI usage is disclosed clearly and accurately.
 - The final repo remains a coherent end-to-end vertical slice.
@@ -114,6 +118,7 @@ The final disclosure should state:
 
 - Run the automated test suite.
 - Walk through each scenario from member view to coach visibility, including at least one fresh signal submission.
+- Review the redesigned member and coach flows from a clean-start perspective across desktop and mobile widths.
 - Review the README from a clean-start perspective and remove any missing steps.
 - Confirm all assignment deliverables are present in the repository.
 
