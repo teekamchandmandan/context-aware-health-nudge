@@ -7,6 +7,10 @@ interface Props {
   onActionComplete: () => void;
 }
 
+function phrasingSourceLabel(phrasingSource: string): string {
+  return phrasingSource === 'llm' ? 'AI phrasing' : 'Template phrasing';
+}
+
 const ACTION_CONFIRMATIONS: Record<ActionType, string> = {
   act_now: 'Got it. We will follow up.',
   dismiss: 'Dismissed.',
@@ -17,7 +21,9 @@ export default function NudgeCard({ nudge, onActionComplete }: Props) {
   const [acting, setActing] = useState<ActionType | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const confirmationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const confirmationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   useEffect(() => {
     return () => {
@@ -70,9 +76,14 @@ export default function NudgeCard({ nudge, onActionComplete }: Props) {
       className='bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden'
     >
       <div className='p-6'>
-        <h2 className='text-lg font-semibold text-gray-900 mb-3'>
-          Your recommendation
-        </h2>
+        <div className='flex items-center justify-between gap-3 mb-3'>
+          <h2 className='text-lg font-semibold text-gray-900'>
+            Your recommendation
+          </h2>
+          <span className='inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600'>
+            {phrasingSourceLabel(nudge.phrasing_source)}
+          </span>
+        </div>
         <p className='text-gray-800 leading-relaxed'>{nudge.content}</p>
       </div>
 
