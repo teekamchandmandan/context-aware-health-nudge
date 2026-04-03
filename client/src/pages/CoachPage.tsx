@@ -8,6 +8,8 @@ import {
 import type { CoachNudgeItem, CoachEscalationItem } from '../types/member';
 import CoachNudgesList from '../components/CoachNudgesList';
 import CoachEscalationsList from '../components/CoachEscalationsList';
+import Spinner from '../components/Spinner';
+import SectionError from '../components/SectionError';
 
 export default function CoachPage() {
   const [nudges, setNudges] = useState<CoachNudgeItem[]>([]);
@@ -118,39 +120,6 @@ export default function CoachPage() {
           </section>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Spinner() {
-  return (
-    <div className='flex justify-center py-12'>
-      <div
-        className='h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin'
-        role='status'
-      >
-        <span className='sr-only'>Loading…</span>
-      </div>
-    </div>
-  );
-}
-
-function SectionError({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry: () => void;
-}) {
-  return (
-    <div className='bg-white rounded-xl border border-red-200 p-6 text-center'>
-      <p className='text-gray-700 mb-3'>{message}</p>
-      <button
-        onClick={onRetry}
-        className='px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors'
-      >
-        Try again
-      </button>
     </div>
   );
 }

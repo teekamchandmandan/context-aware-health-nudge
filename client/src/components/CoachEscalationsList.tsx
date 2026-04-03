@@ -1,4 +1,5 @@
 import type { CoachEscalationItem } from '../types/member';
+import { formatTimestamp } from '../utils/formatTimestamp';
 
 interface Props {
   items: CoachEscalationItem[];
@@ -12,16 +13,6 @@ const SOURCE_LABELS: Record<string, string> = {
 
 function sourceLabel(source: string | null): string {
   return (source && SOURCE_LABELS[source]) ?? source ?? 'Unknown';
-}
-
-function formatTimestamp(ts: string): string {
-  const d = new Date(ts);
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 export default function CoachEscalationsList({ items }: Props) {

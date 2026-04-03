@@ -1,4 +1,5 @@
 import type { CoachNudgeItem } from '../types/member';
+import { formatTimestamp } from '../utils/formatTimestamp';
 
 interface Props {
   items: CoachNudgeItem[];
@@ -14,16 +15,6 @@ function confidenceBand(c: number | null): {
   if (c >= 0.5)
     return { label: 'Medium', className: 'bg-yellow-100 text-yellow-800' };
   return { label: 'Low', className: 'bg-red-100 text-red-800' };
-}
-
-function formatTimestamp(ts: string): string {
-  const d = new Date(ts);
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 const ACTION_LABELS: Record<string, string> = {

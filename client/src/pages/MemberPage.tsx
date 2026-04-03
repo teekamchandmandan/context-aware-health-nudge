@@ -6,6 +6,8 @@ import { SEEDED_MEMBERS } from '../types/member';
 import MemberSwitcher from '../components/MemberSwitcher';
 import NudgeCard from '../components/NudgeCard';
 import QuickLog from '../components/QuickLog';
+import Spinner from '../components/Spinner';
+import SectionError from '../components/SectionError';
 
 export default function MemberPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -82,27 +84,10 @@ export default function MemberPage() {
 
         {/* Nudge area */}
         <div aria-live='polite' className='visible'>
-          {loading && (
-            <div className='flex justify-center py-12'>
-              <div
-                className='h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin'
-                role='status'
-              >
-                <span className='sr-only'>Loading…</span>
-              </div>
-            </div>
-          )}
+          {loading && <Spinner />}
 
           {!loading && error && (
-            <div className='bg-white rounded-xl border border-red-200 p-6 text-center'>
-              <p className='text-gray-700 mb-3'>{error}</p>
-              <button
-                onClick={refetchNudge}
-                className='px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors'
-              >
-                Try again
-              </button>
-            </div>
+            <SectionError message={error} onRetry={refetchNudge} />
           )}
 
           {!loading && !error && state === 'active' && data?.nudge && (
