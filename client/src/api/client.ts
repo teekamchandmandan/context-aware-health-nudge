@@ -4,6 +4,8 @@ import type {
   SignalResponse,
   ActionType,
   SignalType,
+  CoachNudgeListResponse,
+  CoachEscalationListResponse,
 } from '../types/member';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
@@ -111,6 +113,18 @@ export function postSignal(
 
 export function resetSeed(): Promise<{ status: string }> {
   return request<{ status: string }>('/debug/reset-seed', { method: 'POST' });
+}
+
+export function fetchCoachNudges(limit = 20): Promise<CoachNudgeListResponse> {
+  return request<CoachNudgeListResponse>(`/api/coach/nudges?limit=${limit}`);
+}
+
+export function fetchCoachEscalations(
+  limit = 20,
+): Promise<CoachEscalationListResponse> {
+  return request<CoachEscalationListResponse>(
+    `/api/coach/escalations?limit=${limit}`,
+  );
 }
 
 export { ApiError };

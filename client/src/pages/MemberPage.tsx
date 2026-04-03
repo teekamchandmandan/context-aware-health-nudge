@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { fetchNudge, ApiError } from '../api/client';
 import type { MemberNudgeResponse, NudgeState } from '../types/member';
 import { SEEDED_MEMBERS } from '../types/member';
@@ -58,7 +58,15 @@ export default function MemberPage() {
       <div className='max-w-2xl mx-auto px-4 py-8 space-y-6'>
         {/* Header */}
         <header>
-          <h1 className='text-xl font-bold text-gray-900 mb-4'>Digbi Health</h1>
+          <div className='flex items-center justify-between mb-4'>
+            <h1 className='text-xl font-bold text-gray-900'>Digbi Health</h1>
+            <Link
+              to='/coach'
+              className='text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors'
+            >
+              Coach dashboard →
+            </Link>
+          </div>
           <MemberSwitcher
             onMemberChange={handleMemberChange}
             onResetComplete={handleResetComplete}
