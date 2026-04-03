@@ -316,6 +316,7 @@ if __name__ == "__main__":
     test_meal_mismatch()
     test_idempotency()
     test_missing_weight()
+    test_new_signal_supersedes_active_nudge()
     test_support_risk()
     test_priority_order()
     test_cooldown()

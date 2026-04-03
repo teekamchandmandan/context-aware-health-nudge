@@ -389,6 +389,7 @@ if __name__ == "__main__":
         test_action_422_invalid_type,
         test_signal_meal_logged,
         test_signal_weight_logged,
+        test_signal_re_evaluates_existing_active_nudge,
         test_signal_mood_logged,
         test_signal_422_missing_required,
         test_signal_422_unknown_type,

@@ -54,7 +54,7 @@ def _now() -> datetime:
 
 
 def _ts(dt: datetime) -> str:
-    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return dt.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
 
 
 def _id() -> str:
@@ -211,12 +211,12 @@ def _check_cooldown(conn: sqlite3.Connection, member_id: str, nudge_type: str) -
 
 
 def _count_today_nudges(conn: sqlite3.Connection, member_id: str) -> int:
-    """Count nudges auto-delivered (status active, acted, or dismissed) today UTC."""
+    """Count nudges auto-delivered (status active, acted, dismissed, or superseded) today UTC."""
     today_start = _ts(_now().replace(hour=0, minute=0, second=0, microsecond=0))
     row = conn.execute(
         """SELECT COUNT(*) as cnt FROM nudges
            WHERE member_id = ? AND created_at >= ?
-             AND status IN ('active', 'acted', 'dismissed')""",
+             AND status IN ('active', 'acted', 'dismissed', 'superseded')""",
         (member_id, today_start),
     ).fetchone()
     return row["cnt"]

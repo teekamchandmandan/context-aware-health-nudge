@@ -38,6 +38,8 @@ export default function MemberPage() {
 
   function handleMemberChange() {
     setData(null);
+    setLoading(true);
+    setError(null);
   }
 
   function refetchNudge() {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { NudgeDetail, ActionType } from '../types/member';
 import { postAction, ApiError } from '../api/client';
 
@@ -17,6 +17,15 @@ export default function NudgeCard({ nudge, onActionComplete }: Props) {
   const [acting, setActing] = useState<ActionType | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const confirmationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confirmationTimerRef.current !== null) {
+        clearTimeout(confirmationTimerRef.current);
+      }
+    };
+  }, []);
 
   function getActionErrorMessage(err: unknown): string {
     if (err instanceof ApiError) {
@@ -43,7 +52,7 @@ export default function NudgeCard({ nudge, onActionComplete }: Props) {
     try {
       await postAction(nudge.id, actionType);
       setConfirmation(ACTION_CONFIRMATIONS[actionType]);
-      setTimeout(() => onActionComplete(), 1200);
+      confirmationTimerRef.current = setTimeout(() => onActionComplete(), 1200);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         onActionComplete();

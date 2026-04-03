@@ -30,7 +30,7 @@ DbDep = Annotated[sqlite3.Connection, Depends(get_db)]
 
 
 def _ts() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
 
 
 @asynccontextmanager
