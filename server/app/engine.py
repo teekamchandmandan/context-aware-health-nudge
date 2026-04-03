@@ -25,6 +25,12 @@ PRIORITY = {
     "weight_check_in": 3,
 }
 
+TEMPLATE_CONTENT: dict[str, str | None] = {
+    "meal_guidance": "Consider a lighter, lower-carb option for your next meal.",
+    "weight_check_in": "It's been a few days since your last weigh-in — a quick check-in helps track your progress.",
+    "support_risk": None,  # not member-facing; escalated
+}
+
 
 # ── Candidate Model ─────────────────────────────────────────────────────────
 
@@ -259,6 +265,7 @@ def _create_nudge_row(
     nudge_id = _id()
     now = _now()
     delivered_at = _ts(now) if status == "active" else None
+    content = TEMPLATE_CONTENT.get(candidate.nudge_type) if status == "active" else None
     conn.execute(
         """INSERT INTO nudges
            (id, member_id, nudge_type, content, explanation, matched_reason,
@@ -269,7 +276,7 @@ def _create_nudge_row(
             nudge_id,
             member_id,
             candidate.nudge_type,
-            None,  # content filled by phrasing layer (Phase 6)
+            content,
             candidate.explanation_basis,
             candidate.matched_reason,
             candidate.confidence,
