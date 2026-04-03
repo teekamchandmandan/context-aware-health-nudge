@@ -103,6 +103,29 @@ def test_missing_weight():
     conn.close()
 
 
+def test_new_signal_supersedes_active_nudge():
+    section("Fresh signal supersedes active nudge and re-evaluates state")
+    conn = fresh_db()
+
+    first_result = evaluate_member(conn, "member_weight_01")
+    ok("first result is active", first_result["state"] == "active")
+    active_nudge_id = first_result["nudge"]["id"]
+
+    conn.execute(
+        "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+        (_id(), "member_weight_01", "weight_logged", json.dumps({"weight_lb": 180.5}), _ts(_now())),
+    )
+    conn.commit()
+
+    second_result = evaluate_member(conn, "member_weight_01")
+    ok("fresh input clears the old recommendation", second_result["state"] == "no_nudge", f"got {second_result['state']}")
+
+    stale_nudge = conn.execute("SELECT status FROM nudges WHERE id = ?", (active_nudge_id,)).fetchone()
+    ok("stale active nudge marked superseded", stale_nudge and stale_nudge["status"] == "superseded")
+
+    conn.close()
+
+
 # ── Test 4: Scenario — member_support_01 (support risk → escalation) ────────
 
 def test_support_risk():

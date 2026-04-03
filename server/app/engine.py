@@ -174,9 +174,26 @@ def check_support_risk(conn: sqlite3.Connection, member_id: str) -> NudgeCandida
 def get_active_nudge(conn: sqlite3.Connection, member_id: str) -> sqlite3.Row | None:
     """Return the existing active nudge for a member, or None."""
     return conn.execute(
-        "SELECT * FROM nudges WHERE member_id = ? AND status = 'active' LIMIT 1",
+        "SELECT * FROM nudges WHERE member_id = ? AND status = 'active' ORDER BY created_at DESC LIMIT 1",
         (member_id,),
     ).fetchone()
+
+
+def _has_newer_signal(conn: sqlite3.Connection, member_id: str, created_at: str) -> bool:
+    """Return True when a newer member signal exists after the active nudge was created."""
+    row = conn.execute(
+        "SELECT 1 FROM signals WHERE member_id = ? AND created_at > ? LIMIT 1",
+        (member_id, created_at),
+    ).fetchone()
+    return row is not None
+
+
+def _supersede_active_nudge(conn: sqlite3.Connection, nudge_id: str) -> None:
+    """Mark an outdated active nudge as superseded so fresh context can be re-evaluated."""
+    conn.execute(
+        "UPDATE nudges SET status = 'superseded' WHERE id = ?",
+        (nudge_id,),
+    )
 
 
 def _check_cooldown(conn: sqlite3.Connection, member_id: str, nudge_type: str) -> bool:
@@ -329,13 +346,17 @@ def evaluate_member(conn: sqlite3.Connection, member_id: str) -> dict:
       - {"state": "escalated", "nudge_id": ..., "escalation_id": ...} — low-confidence escalation
       - {"state": "no_nudge"}                       — nothing to show
     """
-    # Idempotent: return existing active nudge without re-evaluation
+    # Idempotent unless newer member input arrived after the nudge was created.
     existing = get_active_nudge(conn, member_id)
     if existing:
-        return {"state": "active", "nudge": dict(existing)}
+        if not _has_newer_signal(conn, member_id, existing["created_at"]):
+            return {"state": "active", "nudge": dict(existing)}
+
+        _supersede_active_nudge(conn, existing["id"])
 
     candidate = select_nudge(conn, member_id)
     if not candidate:
+        conn.commit()
         return {"state": "no_nudge"}
 
     result = create_nudge_from_candidate(conn, member_id, candidate)

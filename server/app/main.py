@@ -82,7 +82,7 @@ def _get_nudge(conn: sqlite3.Connection, nudge_id: str) -> sqlite3.Row:
     return row
 
 
-TERMINAL_STATUSES = {"acted", "dismissed", "escalated"}
+TERMINAL_STATUSES = {"acted", "dismissed", "escalated", "superseded"}
 
 
 # ── GET /api/members/{member_id}/nudge ───────────────────────────────────────
