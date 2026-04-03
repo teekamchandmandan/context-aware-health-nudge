@@ -89,6 +89,7 @@ class CoachNudgeItem(BaseModel):
     escalation_recommended: bool = False
     status: str
     latest_action: str | None = None
+    phrasing_source: str = "template"
     created_at: str
 
 

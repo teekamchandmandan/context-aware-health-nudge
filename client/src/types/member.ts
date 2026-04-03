@@ -57,6 +57,45 @@ export interface SignalRequest {
   payload: Record<string, unknown>;
 }
 
+// Coach responses
+export interface CoachNudgeItem {
+  nudge_id: string;
+  member_id: string;
+  member_name: string;
+  nudge_type: string;
+  content: string | null;
+  explanation: string | null;
+  matched_reason: string | null;
+  confidence: number | null;
+  escalation_recommended: boolean;
+  status: string;
+  latest_action: string | null;
+  phrasing_source: string;
+  created_at: string;
+}
+
+export interface CoachNudgeListResponse {
+  items: CoachNudgeItem[];
+  limit: number;
+  count: number;
+}
+
+export interface CoachEscalationItem {
+  escalation_id: string;
+  member_id: string;
+  member_name: string;
+  reason: string | null;
+  source: string | null;
+  status: string;
+  created_at: string;
+}
+
+export interface CoachEscalationListResponse {
+  items: CoachEscalationItem[];
+  limit: number;
+  count: number;
+}
+
 // Seeded member metadata for the switcher
 export interface SeededMember {
   id: string;
