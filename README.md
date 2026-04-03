@@ -17,6 +17,7 @@ Update `docs/plan.md` first whenever any of the following change:
 Keep this README as the reviewer-facing entrypoint, not a second planning document.
 
 ## Current Status
+
 The repository includes the Phase 01 baseline: a FastAPI backend shell, SQLite schema bootstrap, deterministic seed workflow, and a Vite + React + Tailwind client scaffold. Later phases in `docs/` describe the member flow, coach flow, decision engine, and delivery work that still needs to be built.
 
 ## Planned Architecture
@@ -37,6 +38,7 @@ with template fallback on missing key, timeout, or provider failure.
 The planned stack is a Vite + React SPA on the client and FastAPI + SQLite on the backend. For the full rationale, constraints, and behavior details, see `docs/plan.md`.
 
 ## Repository Layout
+
 - `server/`: FastAPI app shell, SQLite bootstrap, and seed workflow
 - `client/`: Vite + React + Tailwind scaffold
 - `docs/assignment.md`: original assignment brief
@@ -57,6 +59,7 @@ Review and implement the phase specs in sequence:
 8. `docs/phase-08-quality-demo-and-delivery.md`
 
 ## Local Setup
+
 Phase 01 provides a runnable backend foundation and a client scaffold.
 
 ### Backend
