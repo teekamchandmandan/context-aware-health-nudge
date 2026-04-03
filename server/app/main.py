@@ -19,11 +19,11 @@ if DEBUG:
     from app.seed import reset_and_seed
 
     @app.post("/debug/reset-seed")
-    def debug_reset_seed():
+    def debug_reset_seed() -> dict[str, str]:
         reset_and_seed()
         return {"status": "ok"}
 
 
 @app.get("/health")
-def health():
+def health() -> dict[str, str]:
     return {"status": "ok"}
