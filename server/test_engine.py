@@ -8,17 +8,14 @@ from pathlib import Path
 # Ensure the server package is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from app.database import init_db, _connect
+from app.database import _connect
 from app.seed import reset_and_seed
 from app.engine import (
     evaluate_member,
-    get_active_nudge,
     select_nudge,
     check_meal_goal_mismatch,
     check_missing_weight_log,
     check_support_risk,
-    _check_cooldown,
-    _count_today_nudges,
     _ts,
     _now,
     _id,

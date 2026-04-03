@@ -226,7 +226,7 @@ ALL_EVALUATORS = [
 ]
 
 
-def select_nudge(conn: sqlite3.Connection, member_id: str) -> Optional[NudgeCandidate]:
+def select_nudge(conn: sqlite3.Connection, member_id: str) -> NudgeCandidate | None:
     """Run evaluators, apply fatigue, return the best candidate or None."""
     candidates = []
     for evaluator in ALL_EVALUATORS:
