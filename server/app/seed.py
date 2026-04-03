@@ -57,14 +57,6 @@ def _seed(conn: sqlite3.Connection) -> None:
 
     # ── Signals ──────────────────────────────────────────────
     signals = [
-        # Meal mismatch: high-carb meal ~6 hours ago
-        (
-            _id(),
-            "member_meal_01",
-            "meal_logged",
-            json.dumps({"meal_type": "lunch", "carbs_g": 72, "protein_g": 18}),
-            _ts(now - timedelta(hours=6)),
-        ),
         # Missing weight: last log ~7 days ago (ensures >4 day gap)
         (
             _id(),
