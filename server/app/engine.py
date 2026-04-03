@@ -7,6 +7,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel
 
+from app import phrasing
+
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
@@ -24,13 +26,6 @@ PRIORITY = {
     "meal_guidance": 2,
     "weight_check_in": 3,
 }
-
-TEMPLATE_CONTENT: dict[str, str | None] = {
-    "meal_guidance": "Consider a lighter, lower-carb option for your next meal.",
-    "weight_check_in": "It's been a few days since your last weigh-in — a quick check-in helps track your progress.",
-    "support_risk": None,  # not member-facing; escalated
-}
-
 
 # ── Candidate Model ─────────────────────────────────────────────────────────
 
@@ -282,7 +277,9 @@ def _create_nudge_row(
     nudge_id = _id()
     now = _now()
     delivered_at = _ts(now) if status == "active" else None
-    content = TEMPLATE_CONTENT.get(candidate.nudge_type) if status == "active" else None
+    template = phrasing.get_template_phrasing(candidate.nudge_type)
+    content = template["content"] if status == "active" else None
+    explanation = template["explanation"] if status == "active" else candidate.explanation_basis
     conn.execute(
         """INSERT INTO nudges
            (id, member_id, nudge_type, content, explanation, matched_reason,
@@ -294,7 +291,7 @@ def _create_nudge_row(
             member_id,
             candidate.nudge_type,
             content,
-            candidate.explanation_basis,
+            explanation,
             candidate.matched_reason,
             candidate.confidence,
             1 if candidate.escalation_recommended else 0,
@@ -331,7 +328,20 @@ def create_nudge_from_candidate(
         return {"state": "escalated", "nudge_id": nudge_id, "escalation_id": esc_id}
     else:
         nudge_id = _create_nudge_row(conn, member_id, candidate, "active")
-        nudge = conn.execute("SELECT * FROM nudges WHERE id = ?", (nudge_id,)).fetchone()
+        member_goal = conn.execute(
+            "SELECT goal_type FROM members WHERE id = ?",
+            (member_id,),
+        ).fetchone()["goal_type"]
+        nudge = phrasing.maybe_apply_llm_phrasing(
+            conn,
+            nudge_id,
+            member_id=member_id,
+            member_goal=member_goal,
+            nudge_type=candidate.nudge_type,
+            matched_reason=candidate.matched_reason,
+            explanation_basis=candidate.explanation_basis,
+            confidence=candidate.confidence,
+        )
         return {"state": "active", "nudge": dict(nudge)}
 
 

@@ -3,6 +3,7 @@
 import os
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 # Ensure server package is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -10,7 +11,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # Use a test-specific database
 os.environ["DATABASE_PATH"] = str(Path(__file__).resolve().parent / "test_api.db")
 os.environ["DEBUG"] = "true"
+os.environ["OPENAI_API_KEY"] = ""
 
+import httpx
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -72,6 +75,79 @@ def test_member_nudge_idempotent():
     d1, d2 = r1.json(), r2.json()
     ok("same nudge ID", d1["nudge"]["id"] == d2["nudge"]["id"],
        f"{d1['nudge']['id']} vs {d2['nudge']['id']}")
+
+
+def test_member_nudge_llm_success():
+    section("GET /nudge — successful mocked LLM phrasing")
+    seed()
+    with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
+        "app.phrasing._request_llm_json",
+        return_value='{"content":"Try a lighter dinner tonight to stay aligned with your goal.","explanation":"You logged a higher-carb meal today and your goal is low carb."}',
+    ):
+        r = client.get("/api/members/member_meal_01/nudge")
+
+    ok("status 200", r.status_code == 200, f"got {r.status_code}")
+    data = r.json()
+    ok("phrasing_source is llm", data["nudge"]["phrasing_source"] == "llm", f"got {data['nudge']['phrasing_source']}")
+    ok("llm content returned", "tonight" in data["nudge"]["content"], f"got {data['nudge']['content']!r}")
+
+
+def test_member_nudge_llm_timeout_fallback():
+    section("GET /nudge — timeout falls back to template")
+    seed()
+    with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
+        "app.phrasing._request_llm_json",
+        side_effect=httpx.TimeoutException("timed out"),
+    ):
+        r = client.get("/api/members/member_meal_01/nudge")
+
+    ok("status 200", r.status_code == 200)
+    data = r.json()
+    ok("phrasing_source is template", data["nudge"]["phrasing_source"] == "template")
+    ok(
+        "template content preserved",
+        data["nudge"]["content"] == "Try a lighter, lower-carb dinner to balance today's earlier meal.",
+        f"got {data['nudge']['content']!r}",
+    )
+
+
+def test_member_nudge_llm_idempotent_reads():
+    section("GET /nudge — existing active nudge is not rephrased twice")
+    seed()
+    calls = {"count": 0}
+
+    def fake_request(*_args, **_kwargs):
+        calls["count"] += 1
+        return '{"content":"Try a lighter dinner tonight to stay aligned.","explanation":"You logged a higher-carb meal today and your goal is low carb."}'
+
+    with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
+        "app.phrasing._request_llm_json",
+        side_effect=fake_request,
+    ):
+        r1 = client.get("/api/members/member_meal_01/nudge")
+        r2 = client.get("/api/members/member_meal_01/nudge")
+
+    ok("both 200", r1.status_code == 200 and r2.status_code == 200)
+    ok("only one provider call", calls["count"] == 1, f"got {calls['count']}")
+    ok("same nudge id", r1.json()["nudge"]["id"] == r2.json()["nudge"]["id"])
+
+
+def test_coach_nudges_show_llm_source():
+    section("GET /coach/nudges — coach list reflects llm phrasing source")
+    seed()
+    with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
+        "app.phrasing._request_llm_json",
+        return_value='{"content":"Try a lighter dinner tonight to stay aligned with your goal.","explanation":"You logged a higher-carb meal today and your goal is low carb."}',
+    ):
+        client.get("/api/members/member_meal_01/nudge")
+
+    r = client.get("/api/coach/nudges")
+    ok("status 200", r.status_code == 200)
+    items = r.json()["items"]
+    meal_item = next((item for item in items if item["member_id"] == "member_meal_01"), None)
+    ok("meal member nudge present", meal_item is not None)
+    if meal_item:
+        ok("phrasing_source is llm", meal_item["phrasing_source"] == "llm", f"got {meal_item['phrasing_source']}")
 
 
 def test_member_nudge_weight():
@@ -382,6 +458,9 @@ if __name__ == "__main__":
     tests = [
         test_member_nudge_active,
         test_member_nudge_idempotent,
+        test_member_nudge_llm_success,
+        test_member_nudge_llm_timeout_fallback,
+        test_member_nudge_llm_idempotent_reads,
         test_member_nudge_weight,
         test_member_nudge_escalated,
         test_member_nudge_404,
@@ -399,6 +478,7 @@ if __name__ == "__main__":
         test_signal_422_unknown_type,
         test_signal_404_unknown_member,
         test_coach_nudges,
+        test_coach_nudges_show_llm_source,
         test_coach_nudges_limit,
         test_coach_escalations,
         test_coach_escalations_from_ask_for_help,

@@ -1,12 +1,19 @@
 """Verification tests for the Phase 2 decision engine."""
 
 import json
+import os
 import sqlite3
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 # Ensure the server package is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+os.environ["OPENAI_API_KEY"] = ""
+
+import httpx
+from pydantic import ValidationError
 
 from app.database import _connect
 from app.seed import reset_and_seed
@@ -20,6 +27,7 @@ from app.engine import (
     _now,
     _id,
 )
+from app.phrasing import PhrasingOutput
 
 PASS = 0
 FAIL = 0
@@ -309,6 +317,218 @@ def test_evaluator_units():
     conn.close()
 
 
+def test_llm_success_upgrade():
+    section("Phase 6: successful LLM phrasing upgrades active nudge")
+    conn = fresh_db()
+
+    with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
+        "app.phrasing._request_llm_json",
+        return_value=json.dumps(
+            {
+                "content": "Try a lighter, lower-carb dinner tonight to balance your earlier meal.",
+                "explanation": "You logged a higher-carb meal today and your goal is low carb.",
+            }
+        ),
+    ):
+        result = evaluate_member(conn, "member_meal_01")
+
+    ok("state is active", result["state"] == "active")
+    nudge = result["nudge"]
+    ok("phrasing source is llm", nudge["phrasing_source"] == "llm", f"got {nudge['phrasing_source']}")
+    ok("content updated from llm", "tonight" in (nudge["content"] or ""), f"got {nudge['content']!r}")
+
+    events = conn.execute(
+        "SELECT event_type, payload_json FROM audit_events ORDER BY created_at ASC"
+    ).fetchall()
+    ok("one llm_call event recorded", len([e for e in events if e["event_type"] == "llm_call"]) == 1)
+    ok("no llm_fallback event recorded", len([e for e in events if e["event_type"] == "llm_fallback"]) == 0)
+
+    conn.close()
+
+
+def test_missing_key_fallback_audit():
+    section("Phase 6: missing API key falls back to template")
+    conn = fresh_db()
+
+    result = evaluate_member(conn, "member_meal_01")
+    ok("state is active", result["state"] == "active")
+    ok("phrasing source remains template", result["nudge"]["phrasing_source"] == "template")
+
+    fallback = conn.execute(
+        "SELECT payload_json FROM audit_events WHERE event_type = 'llm_fallback' ORDER BY created_at DESC LIMIT 1"
+    ).fetchone()
+    ok("llm_fallback event recorded", fallback is not None)
+    if fallback:
+        payload = json.loads(fallback["payload_json"])
+        ok("fallback reason is missing_key", payload["fallback_reason"] == "missing_key", f"got {payload['fallback_reason']}")
+
+    conn.close()
+
+
+def test_llm_invalid_json_fallback():
+    section("Phase 6: invalid JSON falls back to templates")
+    conn = fresh_db()
+
+    with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
+        "app.phrasing._request_llm_json",
+        return_value="not-json",
+    ):
+        result = evaluate_member(conn, "member_meal_01")
+
+    ok("phrasing source remains template", result["nudge"]["phrasing_source"] == "template")
+    fallback = conn.execute(
+        "SELECT payload_json FROM audit_events WHERE event_type = 'llm_fallback' ORDER BY created_at DESC LIMIT 1"
+    ).fetchone()
+    ok("llm_fallback event recorded", fallback is not None)
+    if fallback:
+        payload = json.loads(fallback["payload_json"])
+        ok("fallback reason is invalid_json", payload["fallback_reason"] == "invalid_json", f"got {payload['fallback_reason']}")
+
+    conn.close()
+
+
+def test_llm_timeout_fallback():
+    section("Phase 6: timeout falls back to templates")
+    conn = fresh_db()
+
+    with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
+        "app.phrasing._request_llm_json",
+        side_effect=httpx.TimeoutException("timed out"),
+    ):
+        result = evaluate_member(conn, "member_meal_01")
+
+    ok("phrasing source remains template", result["nudge"]["phrasing_source"] == "template")
+    fallback = conn.execute(
+        "SELECT payload_json FROM audit_events WHERE event_type = 'llm_fallback' ORDER BY created_at DESC LIMIT 1"
+    ).fetchone()
+    ok("llm_fallback event recorded", fallback is not None)
+    if fallback:
+        payload = json.loads(fallback["payload_json"])
+        ok("fallback reason is timeout", payload["fallback_reason"] == "timeout", f"got {payload['fallback_reason']}")
+
+    conn.close()
+
+
+def test_validation_failure_fallback():
+    section("Phase 6: blocked terms are rejected before persistence")
+    conn = fresh_db()
+
+    with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
+        "app.phrasing._request_llm_json",
+        return_value=json.dumps(
+            {
+                "content": "This may diagnose the issue for you.",
+                "explanation": "Medication is not needed right now.",
+            }
+        ),
+    ):
+        result = evaluate_member(conn, "member_meal_01")
+
+    ok("phrasing source remains template", result["nudge"]["phrasing_source"] == "template")
+    ok(
+        "template content preserved",
+        result["nudge"]["content"] == "Try a lighter, lower-carb dinner to balance today's earlier meal.",
+        f"got {result['nudge']['content']!r}",
+    )
+
+    fallback = conn.execute(
+        "SELECT payload_json FROM audit_events WHERE event_type = 'llm_fallback' ORDER BY created_at DESC LIMIT 1"
+    ).fetchone()
+    ok("llm_fallback event recorded", fallback is not None)
+    if fallback:
+        payload = json.loads(fallback["payload_json"])
+        ok(
+            "fallback reason is validation_failure",
+            payload["fallback_reason"] == "validation_failure",
+            f"got {payload['fallback_reason']}",
+        )
+
+    conn.close()
+
+
+def test_existing_active_nudge_skips_rephrase():
+    section("Phase 6: repeated reads do not re-trigger LLM phrasing")
+    conn = fresh_db()
+    calls = {"count": 0}
+
+    def fake_request(*_args, **_kwargs):
+        calls["count"] += 1
+        return json.dumps(
+            {
+                "content": "Try a lighter dinner tonight to keep things aligned.",
+                "explanation": "You logged a higher-carb meal today and your goal is low carb.",
+            }
+        )
+
+    with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
+        "app.phrasing._request_llm_json",
+        side_effect=fake_request,
+    ):
+        first = evaluate_member(conn, "member_meal_01")
+        second = evaluate_member(conn, "member_meal_01")
+
+    ok("only one LLM call made", calls["count"] == 1, f"got {calls['count']}")
+    ok("same nudge returned on second read", first["nudge"]["id"] == second["nudge"]["id"])
+    ok("second read preserves llm phrasing source", second["nudge"]["phrasing_source"] == "llm")
+
+    conn.close()
+
+
+def test_support_risk_skips_llm():
+    section("Phase 6: escalated support-risk path skips LLM phrasing")
+    conn = fresh_db()
+
+    with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
+        "app.phrasing._request_llm_json",
+        side_effect=AssertionError("LLM should not run for escalations"),
+    ):
+        result = evaluate_member(conn, "member_support_01")
+
+    ok("state is escalated", result["state"] == "escalated")
+    llm_events = conn.execute(
+        "SELECT COUNT(*) AS cnt FROM audit_events WHERE event_type IN ('llm_call', 'llm_fallback')"
+    ).fetchone()["cnt"]
+    ok("no llm audit events recorded", llm_events == 0, f"got {llm_events}")
+
+    conn.close()
+
+
+def test_phrasing_output_validation():
+    section("Phase 6: phrasing output validation enforces limits and blocked terms")
+
+    ok(
+        "valid phrasing output accepted",
+        PhrasingOutput.model_validate(
+            {
+                "content": "Take a quick weight check-in when you have a minute.",
+                "explanation": "You have not logged weight in the last few days.",
+            }
+        ).content.startswith("Take a quick weight check-in"),
+    )
+
+    try:
+        PhrasingOutput.model_validate(
+            {
+                "content": "x" * 161,
+                "explanation": "short explanation",
+            }
+        )
+        ok("overlong content rejected", False, "validation unexpectedly passed")
+    except ValidationError:
+        ok("overlong content rejected", True)
+
+    try:
+        PhrasingOutput.model_validate(
+            {
+                "content": "This might diagnose a problem.",
+                "explanation": "Please follow a treatment plan.",
+            }
+        )
+        ok("blocked terms rejected", False, "validation unexpectedly passed")
+    except ValidationError:
+        ok("blocked terms rejected", True)
+
+
 # ── Run ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -322,6 +542,14 @@ if __name__ == "__main__":
     test_cooldown()
     test_daily_cap()
     test_support_risk_bypass()
+    test_llm_success_upgrade()
+    test_missing_key_fallback_audit()
+    test_llm_invalid_json_fallback()
+    test_llm_timeout_fallback()
+    test_validation_failure_fallback()
+    test_existing_active_nudge_skips_rephrase()
+    test_support_risk_skips_llm()
+    test_phrasing_output_validation()
 
     print(f"\n{'═' * 60}")
     print(f"Results: {PASS} passed, {FAIL} failed")
