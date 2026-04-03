@@ -211,6 +211,24 @@ def test_signal_weight_logged():
     ok("weight_lb in payload", r.json()["payload"]["weight_lb"] == 180.5)
 
 
+def test_signal_re_evaluates_existing_active_nudge():
+    section("POST /signals — fresh signal re-evaluates existing active nudge")
+    seed()
+
+    initial = client.get("/api/members/member_weight_01/nudge")
+    ok("initial nudge is active", initial.status_code == 200 and initial.json()["state"] == "active")
+
+    signal = client.post("/api/members/member_weight_01/signals", json={
+        "signal_type": "weight_logged",
+        "payload": {"weight_lb": 180.5}
+    })
+    ok("signal accepted", signal.status_code == 200, f"got {signal.status_code}")
+
+    follow_up = client.get("/api/members/member_weight_01/nudge")
+    ok("follow-up state is no_nudge", follow_up.status_code == 200 and follow_up.json()["state"] == "no_nudge",
+       f"got {follow_up.status_code}, {follow_up.json() if follow_up.status_code == 200 else follow_up.text}")
+
+
 def test_signal_mood_logged():
     section("POST /signals — mood_logged")
     seed()
@@ -371,6 +389,7 @@ if __name__ == "__main__":
         test_action_422_invalid_type,
         test_signal_meal_logged,
         test_signal_weight_logged,
+        test_signal_re_evaluates_existing_active_nudge,
         test_signal_mood_logged,
         test_signal_422_missing_required,
         test_signal_422_unknown_type,

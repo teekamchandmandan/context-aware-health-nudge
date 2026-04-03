@@ -11,7 +11,7 @@ def _now() -> datetime:
 
 
 def _ts(dt: datetime) -> str:
-    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return dt.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
 
 
 def _id() -> str:

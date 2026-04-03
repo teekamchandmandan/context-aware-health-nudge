@@ -30,7 +30,7 @@ DbDep = Annotated[sqlite3.Connection, Depends(get_db)]
 
 
 def _ts() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
 
 
 @asynccontextmanager
@@ -82,7 +82,7 @@ def _get_nudge(conn: sqlite3.Connection, nudge_id: str) -> sqlite3.Row:
     return row
 
 
-TERMINAL_STATUSES = {"acted", "dismissed", "escalated"}
+TERMINAL_STATUSES = {"acted", "dismissed", "escalated", "superseded"}
 
 
 # ── GET /api/members/{member_id}/nudge ───────────────────────────────────────

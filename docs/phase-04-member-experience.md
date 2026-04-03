@@ -81,8 +81,8 @@ Suggested state copy is intentionally simple:
 |                                                  |
 | Quick log an update                              |
 | - weight input                                   |
-| - mood slider + optional note                    |
-| - meal entry + optional photo                    |
+| - mood toggle + optional note                    |
+| - structured meal entry                          |
 |                                                  |
 |  Personalized nudge card                         |
 |  - content                                       |
@@ -100,7 +100,7 @@ Suggested state copy is intentionally simple:
 - The page should be usable with deterministic template phrasing before LLM polish lands.
 - Keep signal submission and nudge action handling on the same page so the interaction loop feels immediate.
 - Keep the member flow resilient to empty or low-confidence states returned by the backend.
-- If meal photo capture is included, show a lightweight local preview and keep the structured fallback path available.
+- The shipped Phase 04 flow uses structured meal entry only; photo capture remains optional future scope as long as the structured path stays available.
 - Prefer server-confirmed actions over optimistic updates because trust matters more than speed in this flow.
 
 ## Recommended Work Breakdown

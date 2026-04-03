@@ -1,0 +1,79 @@
+// Enums
+export type NudgeState = 'active' | 'no_nudge' | 'escalated';
+export type ActionType = 'act_now' | 'dismiss' | 'ask_for_help';
+export type SignalType = 'meal_logged' | 'weight_logged' | 'mood_logged';
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export type MoodValue = 'low' | 'neutral' | 'high';
+
+// Responses
+export interface MemberRef {
+  id: string;
+  name: string;
+}
+
+export interface NudgeDetail {
+  id: string;
+  nudge_type: string;
+  content: string | null;
+  explanation: string | null;
+  matched_reason: string | null;
+  confidence: number | null;
+  escalation_recommended: boolean;
+  status: string;
+  phrasing_source: string;
+  created_at: string;
+}
+
+export interface MemberNudgeResponse {
+  state: NudgeState;
+  member: MemberRef;
+  nudge: NudgeDetail | null;
+  escalation_created?: boolean;
+}
+
+export interface ActionResponse {
+  nudge_id: string;
+  action_type: string;
+  nudge_status: string;
+  escalation_created: boolean;
+  recorded_at: string;
+}
+
+export interface SignalResponse {
+  id: string;
+  member_id: string;
+  signal_type: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+// Request shapes
+export interface ActionRequest {
+  action_type: ActionType;
+}
+
+export interface SignalRequest {
+  signal_type: SignalType;
+  payload: Record<string, unknown>;
+}
+
+// Seeded member metadata for the switcher
+export interface SeededMember {
+  id: string;
+  name: string;
+  scenario: string;
+}
+
+export const SEEDED_MEMBERS: SeededMember[] = [
+  { id: 'member_meal_01', name: 'Alice Chen', scenario: 'Meal mismatch' },
+  {
+    id: 'member_weight_01',
+    name: 'Bob Martinez',
+    scenario: 'Missing check-in',
+  },
+  {
+    id: 'member_support_01',
+    name: 'Carol Davis',
+    scenario: 'Support escalation',
+  },
+];
