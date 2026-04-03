@@ -38,7 +38,8 @@ def _ts() -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout, force=True)
+    if DEBUG:
+        logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout, force=True)
     init_db()
     yield
 
