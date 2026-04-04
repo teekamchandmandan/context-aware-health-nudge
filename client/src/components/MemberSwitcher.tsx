@@ -47,9 +47,11 @@ export default function MemberSwitcher({
     };
   }, []);
 
-  function selectMember() {
+  function selectMember(memberId: string) {
     setOpen(false);
-    onMemberChange();
+    if (memberId !== currentId) {
+      onMemberChange();
+    }
   }
 
   function toggleMenu() {
@@ -113,7 +115,7 @@ export default function MemberSwitcher({
                   key={member.id}
                   to={{ search }}
                   role='menuitem'
-                  onClick={selectMember}
+                  onClick={() => selectMember(member.id)}
                   aria-current={isCurrent ? 'page' : undefined}
                   className={`flex items-center justify-between rounded-[1rem] px-4 py-3 text-sm transition ${
                     isCurrent

@@ -112,6 +112,7 @@ Hosted asset URLs are not yet captured in the repo. Once available, download the
 - Improve timestamp presentation for quick review.
 - Preserve the lightweight read-only posture while making the page easier to scan.
 - Make the layout effective both as stacked mobile sections and as a two-column desktop review surface.
+- **Planned follow-on:** Introduce a nudge detail card or modal (triggered by clicking a nudge list item) that surfaces the full `explanation` field and the `phrasing_source` indicator (`llm` vs `template`). These fields are already returned by the API but are not yet exposed in the coach list view. The detail surface will allow a coach reviewer to answer "what happened and why" without cluttering the scannable list layout.
 
 ## Frontend Foundation Requirements
 

@@ -123,7 +123,7 @@ export default function MemberPage() {
         </section>
 
         <section className='mb-8'>
-          <div aria-live='polite'>
+          <div className='visible' aria-live='polite'>
             {loading && <Spinner />}
 
             {!loading && error && (
