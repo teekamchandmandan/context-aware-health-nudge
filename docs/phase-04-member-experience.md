@@ -61,8 +61,7 @@ This route is distinct from the coach experience and should remain member-only i
 - Make the explanation legible and visibly separate from the main recommendation.
 - Reflect action results immediately so the user is not left uncertain about what happened.
 - Prefer a centered card layout with the recommendation, explanation, and three actions visible without scrolling on a laptop.
-- Provide a reliable structured fallback for meal logging even if photo capture is available.
-- Start meal logging with free-text meal capture and optional photo upload instead of requiring macro knowledge up front.
+- Require meal logging to start with photo capture or upload, while still avoiding macro entry up front.
 - Add inline image preview for uploaded meal photos.
 - Keep the meal flow to one save action with no intermediate review step.
 - Do not surface coach-only controls, coach-facing reasoning details, or direct coach navigation in the member route.
@@ -93,8 +92,8 @@ Suggested state copy is intentionally simple:
 |                                                  |
 | Quick log an update                              |
 | - weight input                                   |
-| - mood toggle + optional note                    |
-| - meal description + optional photo preview      |
+| - mood toggle                                    |
+| - meal photo upload                              |
 |                                                  |
 |  Personalized nudge card                         |
 |  - content                                       |
@@ -112,7 +111,7 @@ Suggested state copy is intentionally simple:
 - The page should be usable with deterministic template phrasing before LLM polish lands.
 - Keep signal submission and nudge action handling on the same page so the interaction loop feels immediate.
 - Keep the member flow resilient to empty or low-confidence states returned by the backend.
-- The meal flow should submit once, let the backend analyze the meal details and optional photo, and save the extracted structured fields in the same request.
+- The meal flow should submit once, let the backend analyze the required photo, and save the extracted structured fields in the same request.
 - The assignment build may keep meal photos transient after analysis, but product notes should call out that a production app would likely persist past uploads for member trust and recall.
 - Prefer server-confirmed actions over optimistic updates because trust matters more than speed in this flow.
 - Seeded member switching is allowed for the demo, but cross-view shortcuts between member and coach should not be part of the intended member UX.
@@ -136,7 +135,7 @@ Suggested state copy is intentionally simple:
 - The UI handles no-nudge and error states gracefully.
 - A reviewer can exercise each seeded scenario without auth.
 - Demo member switching is visible and does not require editing the URL manually.
-- Meal logging remains usable without photo capture.
+- Meal logging is photo-only and requires a photo.
 - Meal logging supports photo preview before submit.
 - Member-visible explanations may reference backend-extracted meal details after the one-step meal log is saved.
 

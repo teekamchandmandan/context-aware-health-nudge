@@ -54,9 +54,9 @@ The assignment allows LLM usage, but the implementation should show restraint. T
 
 ## Prompt Boundary
 
-The prompt should receive only the already-decided nudge type, member goal, short matched reason, and desired tone. Do not send raw signal history, raw image data, or free-form notes unless they are first reduced to a short structured summary.
+The prompt should receive only the already-decided nudge type, member goal, short matched reason, and desired tone. Do not send raw signal history, raw image data, or other free-form member input unless they are first reduced to a short structured summary.
 
-If a separate meal-analysis feature is implemented, it should stay outside the phrasing step: the meal-analysis request may use raw member description and optional image input to produce structured meal fields, but the phrasing prompt should still receive only the structured meal details already saved on the signal.
+The meal-analysis feature should stay outside the phrasing step: the meal-analysis request may use raw image input to produce structured meal fields, but the phrasing prompt should still receive only the structured meal details already saved on the signal.
 
 Suggested system prompt shape:
 
@@ -79,7 +79,7 @@ Return only JSON with content and explanation.
 
 - The LLM receives only the minimum structured context needed for phrasing.
 - Output must stay short, practical, and non-diagnostic.
-- Any photo-assisted or note-assisted flow must degrade cleanly to deterministic structured inputs without blocking the member experience.
+- The photo-only meal flow must degrade cleanly to deterministic structured inputs without blocking the member experience.
 - Detailed meal explanations should only reference meal type or macro values that were persisted on the saved meal signal.
 - Any failed validation should route to deterministic templates.
 - The system should remain fully usable without an API key.

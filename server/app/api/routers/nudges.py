@@ -83,6 +83,5 @@ def post_nudge_action(
         nudge_id=nudge_id,
         action_type=action_type,
         nudge_status=new_status,
-        escalation_created=escalation_created,
         recorded_at=now,
     )

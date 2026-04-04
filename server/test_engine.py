@@ -135,6 +135,23 @@ def test_missing_weight():
     conn.close()
 
 
+def test_catch_up_member():
+    section("Scenario 2b: member_catchup_01 — no nudge needed")
+    conn = fresh_db()
+
+    result = evaluate_member(conn, "member_catchup_01")
+    ok("state is 'no_nudge'", result["state"] == "no_nudge", f"got {result['state']}")
+    ok("nudge is absent", result.get("nudge") is None)
+
+    nudges = conn.execute(
+        "SELECT COUNT(*) AS cnt FROM nudges WHERE member_id = ?",
+        ("member_catchup_01",),
+    ).fetchone()["cnt"]
+    ok("no nudges persisted", nudges == 0, f"got {nudges}")
+
+    conn.close()
+
+
 def test_new_signal_supersedes_active_nudge():
     section("Fresh signal supersedes active nudge and re-evaluates state")
     conn = fresh_db()
@@ -214,9 +231,20 @@ def test_priority_order():
     from datetime import timedelta
     conn.execute(
         "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
-        (_id(), "member_support_01", "meal_logged",
-         json.dumps({"meal": "Pizza", "carbs_g": 95}),
-         _ts(_now() - timedelta(hours=2))),
+        (
+            _id(),
+            "member_support_01",
+            "meal_logged",
+            json.dumps(
+                {
+                    "meal_type": "dinner",
+                    "carbs_g": 95,
+                    "photo_attached": True,
+                    "analysis_source": "llm",
+                }
+            ),
+            _ts(_now() - timedelta(hours=2)),
+        ),
     )
     conn.commit()
 
@@ -342,6 +370,9 @@ def test_evaluator_units():
     c4 = check_missing_weight_log(conn, "member_meal_01")
     ok("missing weight fires for member_meal_01 (never logged)", c4 is not None)
 
+    c4b = check_missing_weight_log(conn, "member_catchup_01")
+    ok("missing weight does NOT fire for member_catchup_01", c4b is None)
+
     # check_support_risk should fire for member_support_01
     c5 = check_support_risk(conn, "member_support_01")
     ok("support risk fires for member_support_01", c5 is not None)
@@ -354,8 +385,8 @@ def test_evaluator_units():
     conn.close()
 
 
-def test_description_first_meal_requires_confirmation():
-    section("Description-first meal guidance requires confirmed details")
+def test_meal_log_without_photo_attachment_is_ignored():
+    section("Meal payload without photo attachment does not trigger guidance")
     conn = fresh_db()
 
     conn.execute("UPDATE members SET goal_type = 'low_carb' WHERE id = 'member_weight_01'")
@@ -367,36 +398,10 @@ def test_description_first_meal_requires_confirmation():
             "meal_logged",
             json.dumps(
                 {
-                    "meal_input_method": "description",
-                    "description": "Big bowl of pasta",
-                    "carbs_g": 82,
-                    "analysis_source": "fallback",
-                    "analysis_confirmed": False,
-                }
-            ),
-            _ts(_now()),
-        ),
-    )
-    conn.commit()
-
-    unconfirmed = check_meal_goal_mismatch(conn, "member_weight_01")
-    ok("unconfirmed meal does not trigger guidance", unconfirmed is None)
-
-    conn.execute(
-        "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
-        (
-            _id(),
-            "member_weight_01",
-            "meal_logged",
-            json.dumps(
-                {
-                    "meal_input_method": "description",
-                    "description": "Big bowl of pasta",
                     "meal_type": "dinner",
                     "carbs_g": 82,
-                    "protein_g": 18,
                     "analysis_source": "llm",
-                    "analysis_confirmed": True,
+                    "photo_attached": False,
                 }
             ),
             _ts(_now()),
@@ -404,13 +409,8 @@ def test_description_first_meal_requires_confirmation():
     )
     conn.commit()
 
-    confirmed = check_meal_goal_mismatch(conn, "member_weight_01")
-    ok("confirmed meal triggers guidance", confirmed is not None)
-    ok(
-        "confirmed explanation basis uses meal type",
-        confirmed is not None and "Dinner meal" in confirmed.explanation_basis,
-        f"got {confirmed.explanation_basis if confirmed else 'None'}",
-    )
+    candidate = check_meal_goal_mismatch(conn, "member_weight_01")
+    ok("meal without photo attachment does not trigger guidance", candidate is None)
 
     conn.close()
 
@@ -428,7 +428,6 @@ def test_one_step_meal_input_is_trusted():
             "meal_logged",
             json.dumps(
                 {
-                    "meal_input_method": "one_step_with_photo",
                     "meal_type": "dinner",
                     "photo_attached": True,
                     "carbs_g": 82,
@@ -672,11 +671,12 @@ def test_phrasing_output_validation():
 
 if __name__ == "__main__":
     test_evaluator_units()
-    test_description_first_meal_requires_confirmation()
+    test_meal_log_without_photo_attachment_is_ignored()
     test_one_step_meal_input_is_trusted()
     test_meal_mismatch()
     test_idempotency()
     test_missing_weight()
+    test_catch_up_member()
     test_new_signal_supersedes_active_nudge()
     test_support_risk()
     test_priority_order()

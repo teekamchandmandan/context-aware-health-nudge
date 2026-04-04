@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 CONFIDENCE_LOW_THRESHOLD = 0.50
 COOLDOWN_HOURS = 24
@@ -23,7 +23,7 @@ class NudgeCandidate(BaseModel):
     nudge_type: str
     matched_reason: str
     explanation_basis: str
-    confidence: float
+    confidence: float = Field(ge=0, le=1)
     escalation_recommended: bool
     source_signal_ids: list[str]
     priority: int

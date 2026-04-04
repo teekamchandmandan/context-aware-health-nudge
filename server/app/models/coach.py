@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CoachNudgeItem(BaseModel):
@@ -9,7 +9,7 @@ class CoachNudgeItem(BaseModel):
     content: str | None = None
     explanation: str | None = None
     matched_reason: str | None = None
-    confidence: float | None = None
+    confidence: float | None = Field(default=None, ge=0, le=1)
     escalation_recommended: bool = False
     status: str
     latest_action: str | None = None

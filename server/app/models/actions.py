@@ -11,5 +11,4 @@ class ActionResponse(BaseModel):
     nudge_id: str
     action_type: str
     nudge_status: str
-    escalation_created: bool
     recorded_at: str

@@ -75,7 +75,7 @@ The first branch should establish a minimal but durable layout.
 
 ## Required Enum Values
 
-- `signal_type`: `meal_logged`, `weight_logged`, `mood_logged`
+- `signal_type`: `weight_logged`, `mood_logged`, `sleep_logged`
 - `nudge_type`: `meal_guidance`, `weight_check_in`, `support_risk`
 - `nudge.status`: `active`, `acted`, `dismissed`, `escalated`
 - `nudge_actions.action_type`: `act_now`, `dismiss`, `ask_for_help`
@@ -92,11 +92,13 @@ The seed set should use stable demo members, a small amount of historical contex
 | `member_weight_01`  | `weight_loss` | Missing weight scenario | No `weight_logged` signal in the last 4 full days                                                                               |
 | `member_support_01` | `balanced`    | Support-risk scenario   | One `mood_logged` signal with `mood: low` in the last 3 days and two recent dismissed nudges                                    |
 
+Optional extra demo coverage is fine when it improves product validation without changing the three required scenarios. A good example is a seeded member such as `member_catchup_01` whose recent data intentionally returns `state: "no_nudge"` so the empty member experience can be exercised directly.
+
 Example payload shapes:
 
-- `meal_logged`: `{ "meal_type": "lunch", "carbs_g": 72, "protein_g": 18, "meal_tag": "high_carb", "photo_attached": true }`
+- `meal_logged`: `{ "meal_type": "lunch", "carbs_g": 72, "protein_g": 18, "photo_attached": true }`
 - `weight_logged`: `{ "weight_lb": 182.4 }`
-- `mood_logged`: `{ "mood": "low", "note": "Feeling off plan this week" }`
+- `mood_logged`: `{ "mood": "low" }`
 
 ## Implementation Notes
 

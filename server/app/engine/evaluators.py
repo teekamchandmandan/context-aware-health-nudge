@@ -70,20 +70,7 @@ def _get_meal_label(payload: dict) -> str:
 
 
 def meal_fields_confirmed(payload: dict) -> bool:
-    if payload.get("analysis_confirmed") is True:
-        return True
-
-    meal_input_method = payload.get("meal_input_method")
-    if meal_input_method in {"manual", "structured"}:
-        return True
-
-    if isinstance(meal_input_method, str) and meal_input_method.startswith("one_step"):
-        return True
-
-    if "analysis_confirmed" not in payload and "analysis_source" not in payload:
-        return True
-
-    return False
+    return payload.get("photo_attached") is True and payload.get("analysis_source") in {"llm", "fallback"}
 
 
 def check_missing_weight_log(conn: sqlite3.Connection, member_id: str) -> NudgeCandidate | None:

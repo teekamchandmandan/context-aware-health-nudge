@@ -10,7 +10,7 @@ export interface FormProps {
   clearFeedback: () => void;
 }
 
-export type MealField = 'description' | 'photo';
+export type MealField = 'photo';
 export type MealFieldErrors = Partial<Record<MealField, string>>;
 
 export type WeightUnit = 'lb' | 'kg';

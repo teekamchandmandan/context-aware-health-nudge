@@ -1,11 +1,7 @@
 // Enums
 export type NudgeState = 'active' | 'no_nudge' | 'escalated';
 export type ActionType = 'act_now' | 'dismiss' | 'ask_for_help';
-export type SignalType =
-  | 'meal_logged'
-  | 'weight_logged'
-  | 'mood_logged'
-  | 'sleep_logged';
+export type SignalType = 'weight_logged' | 'mood_logged' | 'sleep_logged';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type MoodValue = 'low' | 'neutral' | 'high';
 
@@ -32,14 +28,12 @@ export interface MemberNudgeResponse {
   state: NudgeState;
   member: MemberRef;
   nudge: NudgeDetail | null;
-  escalation_created?: boolean;
 }
 
 export interface ActionResponse {
   nudge_id: string;
   action_type: string;
   nudge_status: string;
-  escalation_created: boolean;
   recorded_at: string;
 }
 
@@ -118,5 +112,10 @@ export const SEEDED_MEMBERS: SeededMember[] = [
     id: 'member_support_01',
     name: 'Carol Davis',
     scenario: 'Support escalation',
+  },
+  {
+    id: 'member_catchup_01',
+    name: 'Diego Rivera',
+    scenario: 'All caught up',
   },
 ];

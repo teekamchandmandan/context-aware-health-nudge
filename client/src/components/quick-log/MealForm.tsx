@@ -1,4 +1,10 @@
-import { useEffect, useState, type ChangeEvent, type DragEvent, type FormEvent } from 'react';
+import {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+  type FormEvent,
+} from 'react';
 import { ApiError, postMealLog } from '../../api/client';
 import type { FormProps, MealFieldErrors } from './shared';
 import {
@@ -69,10 +75,16 @@ export default function MealForm({
   }
 
   function mapMealValidationMessage(validationMessage: string) {
-    if (validationMessage.includes('description or photo') || validationMessage.includes('image')) {
+    if (validationMessage.includes('meal photo')) {
+      setFieldErrors({ photo: 'Add a photo of your meal.' });
+      return true;
+    }
+
+    if (validationMessage.includes('image')) {
       setFieldErrors({ photo: 'Upload an image file for meal photos.' });
       return true;
     }
+
     return false;
   }
 
@@ -100,8 +112,7 @@ export default function MealForm({
     } catch (error) {
       if (error instanceof ApiError && error.status === 422) {
         const validationMessage =
-          getValidationMessage(error) ??
-          'Check your photo and try again.';
+          getValidationMessage(error) ?? 'Check your photo and try again.';
 
         if (!mapMealValidationMessage(validationMessage)) {
           onError(validationMessage);
