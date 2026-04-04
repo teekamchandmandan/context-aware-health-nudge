@@ -1,6 +1,6 @@
 # Context-Aware Health Nudge
 
-This repository contains the Digbi Health product engineering assignment for a focused Context-Aware Health Nudge vertical slice.
+This repository contains a focused Context-Aware Health Nudge vertical slice.
 
 ## Source of Truth
 

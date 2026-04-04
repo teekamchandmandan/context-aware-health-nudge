@@ -4,6 +4,8 @@
 
 Redesign the member and coach experiences into a professional, trustworthy, and production-credible interface without removing or weakening the features, safety behaviors, and demo flows already built.
 
+Implementation should start with the member route first. The member direction established here should then guide a later coach-focused redesign pass without collapsing the two experiences into one shared surface.
+
 ## Suggested Branch
 
 `phase/08-ui-ux-redesign`
@@ -29,6 +31,7 @@ The redesign should assume the current member flow, coach flow, phrasing behavio
 - Improve layout, spacing, typography, color use, and information hierarchy.
 - Refactor repeated UI patterns into a small reusable frontend design foundation.
 - Redesign the member page so the nudge loop feels calm, clear, and trustworthy.
+- Adapt an external reference design into the member route without changing the existing product flow or merging member and coach surfaces.
 - Redesign the coach page so escalations and recent nudges are easier to scan and review.
 - Improve mobile, tablet, and common laptop responsiveness.
 - Improve accessibility fundamentals including labels, focus states, keyboard behavior, and non-color status signaling.
@@ -46,7 +49,7 @@ The redesign should assume the current member flow, coach flow, phrasing behavio
 
 ## Non-Negotiable Behaviors To Preserve
 
-- Keep the two primary routes: member and coach.
+- Keep the two primary routes separate: `/member` and `/coach` remain distinct experiences and should not directly expose each other in the in-product UI.
 - Keep the three member actions: `act_now`, `dismiss`, and `ask_for_help`.
 - Keep support for logging meals, weight, and mood.
 - Keep seeded member switching and the demo reset flow.
@@ -58,7 +61,7 @@ The redesign should assume the current member flow, coach flow, phrasing behavio
 
 ## Deliverables
 
-- A redesign brief translated into concrete page and component changes in the client.
+- A member-first redesign brief translated into concrete page and component changes in the client.
 - A shared visual and component foundation for the current product slice.
 - A redesigned member experience that preserves the current live interaction loop.
 - A redesigned coach experience that improves review clarity and prioritization.
@@ -77,14 +80,30 @@ The redesigned UI should feel like a modern care product:
 
 The member experience should emphasize confidence, clarity, and immediate next steps. The coach experience should emphasize scanability, priority, and reasoning visibility.
 
+The member and coach routes are separate product surfaces, not alternate tabs of the same dashboard. The redesign should reinforce that separation through navigation, layout, and information architecture.
+
+## External Design Reference
+
+Use the following Stitch screen as a guiding design reference for the member route:
+
+- Project ID: `18374012017328105154`
+- Screen: `Member Dashboard - Desktop`
+- Screen ID: `88190d7e686247f8b74d1a88f9791d90`
+
+This reference should be adapted to the Digbi product constraints rather than copied literally. The member route still needs to center one active nudge, lightweight signal logging, and calm state transitions.
+
+Hosted asset URLs are not yet captured in the repo. Once available, download the Stitch images and code with a utility such as `curl -L` and record where those artifacts live so implementation stays reproducible.
+
 ## Member Experience Goals
 
 - Make the active nudge the primary focus without hiding the quick-log tools.
+- Translate the reference design into a stronger information hierarchy where the nudge is the dominant focal surface and quick logging remains immediately available.
 - Create a clearer action hierarchy so the main next step is obvious.
 - Improve field labeling and validation visibility in the quick-log flow.
 - Make action confirmations and escalated states feel deliberate rather than abrupt.
 - Preserve the immediate loop between logging a signal and seeing updated member state.
 - Ensure the member page remains usable without relying on hidden detail panels or fragile layout assumptions.
+- Preserve route isolation so the member experience does not expose direct coach navigation, coach-only controls, or coach-facing reasoning detail.
 
 ## Coach Experience Goals
 
@@ -113,10 +132,12 @@ The member experience should emphasize confidence, clarity, and immediate next s
 
 ## Recommended Work Breakdown
 
+Implementation should start with the member route and shared primitives, then apply those lessons to the coach route.
+
 1. Define the redesign guardrails and reusable visual foundation.
 2. Rework shared layout and primitive UI patterns.
-3. Redesign the member page and nudge interaction flow.
-4. Redesign the coach page and review layout.
+3. Redesign the member page and nudge interaction flow using the Stitch screen as a guiding reference.
+4. Redesign the coach page and review layout after the member direction is stable.
 5. Refine responsive behavior, state handling, and accessibility.
 6. Validate all seeded scenarios against the redesigned experience.
 
@@ -137,9 +158,10 @@ The member experience should emphasize confidence, clarity, and immediate next s
 - Submit fresh meal, weight, and mood signals and confirm the interaction loop still works.
 - Trigger all three nudge actions and verify the resulting UI states.
 - Verify `ask_for_help` still produces visible member confirmation and coach visibility.
+- Verify the redesigned member and coach routes do not expose direct links to each other in the in-product UI.
 - Review both pages at mobile and laptop sizes.
 - Smoke test keyboard reachability, visible focus, and labeled form controls.
 
 ## Merge Checkpoint
 
-Merge when the product remains functionally equivalent to the earlier phases but the UI/UX quality is clearly upgraded and ready for final delivery validation.
+Merge when the product remains functionally equivalent to the earlier phases, the member-first redesign direction is clearly established, and the UI/UX quality is clearly upgraded and ready for final delivery validation.
