@@ -70,42 +70,65 @@ export default function NudgeCard({ nudge, onActionComplete }: Props) {
   return (
     <section
       aria-label='Your next step'
-      className='overflow-hidden rounded-[2rem] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(242,244,244,0.94))] shadow-[0_20px_60px_rgba(25,28,29,0.06)]'
+      className='relative overflow-hidden rounded-2xl bg-[var(--color-surface)] shadow-[var(--shadow-soft)] border border-[var(--color-border)] transition-shadow duration-300 hover:shadow-lg'
     >
-      <div className='border-b border-[rgba(190,200,200,0.45)] bg-[linear-gradient(135deg,rgba(168,239,239,0.28),rgba(255,255,255,0.92))] p-6 sm:p-8'>
-        <div className='mb-5 flex flex-wrap items-center gap-3'>
-          <span className='rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]'>
+      {/* Decorative accent bar */}
+      <div className='absolute left-0 top-0 h-1.5 w-full bg-[var(--color-primary)]'></div>
+
+      <div className='p-6 sm:p-8'>
+        <header className='mb-5 flex items-center justify-between'>
+          <span className='inline-flex items-center rounded-full bg-[var(--color-accent-soft)] px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-[var(--color-primary-strong)]'>
             For today
           </span>
+          <span className='text-xs font-medium text-[var(--color-muted)]'>
+            {formatTimestamp(nudge.created_at)}
+          </span>
+        </header>
+
+        <div className='mb-6'>
+          <h2 className='mb-3 font-headline text-3xl font-bold tracking-tight text-[var(--color-primary)]'>
+            Your next step
+          </h2>
+          <p className='text-lg leading-relaxed text-[var(--color-text)]'>
+            {nudge.content ?? 'We are getting this ready for you.'}
+          </p>
         </div>
 
-        <h2 className='font-headline text-3xl font-extrabold tracking-[-0.04em] text-[var(--color-primary)] sm:text-4xl'>
-          Your next step
-        </h2>
-        <p className='mt-4 max-w-3xl text-lg leading-8 text-[var(--color-text)]'>
-          {nudge.content ?? 'We are getting this ready for you.'}
-        </p>
-        <p className='mt-5 text-sm font-medium text-[var(--color-muted)]'>
-          Updated {formatTimestamp(nudge.created_at)}
-        </p>
+        {nudge.explanation && (
+          <div className='rounded-xl bg-[var(--color-background)] p-5 ring-1 ring-inset ring-[var(--color-border)]/50'>
+            <div className='flex items-start gap-4'>
+              <svg
+                className='mt-0.5 h-6 w-6 shrink-0 text-[var(--color-primary)] opacity-70'
+                fill='none'
+                viewBox='0 0 24 24'
+                strokeWidth='1.75'
+                stroke='currentColor'
+                aria-hidden='true'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  d='M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.82 1.508-2.316a7.5 7.5 0 10-7.516 0c.85.496 1.508 1.333 1.508 2.316V18'
+                />
+              </svg>
+              <div>
+                <h3 className='text-[11px] font-bold uppercase tracking-widest text-[var(--color-muted)] mb-1'>
+                  Why this may help
+                </h3>
+                <p className='text-sm leading-relaxed text-[var(--color-muted)]'>
+                  {nudge.explanation}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {nudge.explanation && (
-        <div className='border-b border-[rgba(190,200,200,0.45)] px-6 py-6 sm:px-8'>
-          <p className='text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]'>
-            Why this may help
-          </p>
-          <p className='mt-3 text-base leading-8 text-[var(--color-muted)]'>
-            {nudge.explanation}
-          </p>
-        </div>
-      )}
-
-      <div className='px-6 py-6 sm:px-8'>
+      <div className='bg-[var(--color-surface-soft)] px-6 py-5 sm:px-8 border-t border-[var(--color-surface-strong)]'>
         {confirmation ? (
           <p
             role='status'
-            className='rounded-[1.25rem] bg-[rgba(143,246,208,0.22)] px-5 py-4 text-center text-sm font-semibold text-[var(--color-accent)]'
+            className='rounded-xl bg-[var(--color-accent-soft)] px-4 py-3 text-center text-sm font-semibold text-[var(--color-accent)] animate-in fade-in duration-300'
           >
             {confirmation}
           </p>
@@ -114,32 +137,32 @@ export default function NudgeCard({ nudge, onActionComplete }: Props) {
             {error && (
               <p
                 role='alert'
-                className='mb-4 rounded-[1rem] bg-[#fff0ee] px-4 py-3 text-sm font-medium text-[var(--color-error)]'
+                className='mb-4 rounded-xl bg-[#fff0ee] px-4 py-3 text-sm font-medium text-[var(--color-error)]'
               >
                 {error}
               </p>
             )}
-            <div className='flex flex-col gap-3 sm:flex-row sm:flex-wrap'>
+            <div className='flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3'>
               <button
-                onClick={() => handleAction('act_now')}
+                onClick={() => handleAction('dismiss')}
                 disabled={acting !== null}
-                className='inline-flex items-center justify-center rounded-[1rem] bg-[var(--color-primary)] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_rgba(0,66,66,0.18)] transition hover:-translate-y-0.5 hover:bg-[var(--color-primary-strong)] disabled:cursor-not-allowed disabled:opacity-60'
+                className='inline-flex items-center justify-center rounded-xl bg-[var(--color-surface)] px-5 py-2.5 text-sm font-semibold text-[var(--color-muted)] ring-1 ring-inset ring-[var(--color-border)] transition-all hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-primary)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100'
               >
-                {acting === 'act_now' ? 'Saving…' : 'I will do this'}
+                {acting === 'dismiss' ? 'Saving…' : 'Not now'}
               </button>
               <button
                 onClick={() => handleAction('ask_for_help')}
                 disabled={acting !== null}
-                className='inline-flex items-center justify-center rounded-[1rem] bg-[rgba(186,235,245,0.66)] px-5 py-3 text-sm font-semibold text-[var(--color-primary)] transition hover:-translate-y-0.5 hover:bg-[rgba(186,235,245,0.9)] disabled:cursor-not-allowed disabled:opacity-60'
+                className='inline-flex items-center justify-center rounded-xl bg-[var(--color-secondary-soft)] px-5 py-2.5 text-sm font-semibold text-[var(--color-primary)] transition-all hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100'
               >
                 {acting === 'ask_for_help' ? 'Saving…' : 'I need support'}
               </button>
               <button
-                onClick={() => handleAction('dismiss')}
+                onClick={() => handleAction('act_now')}
                 disabled={acting !== null}
-                className='inline-flex items-center justify-center rounded-[1rem] border border-[rgba(190,200,200,0.9)] bg-white px-5 py-3 text-sm font-semibold text-[var(--color-muted)] transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60'
+                className='inline-flex items-center justify-center rounded-xl bg-[var(--color-primary)] px-6 py-2.5 text-sm font-semibold text-[var(--color-surface)] shadow-md transition-all hover:bg-[var(--color-primary-strong)] hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100'
               >
-                {acting === 'dismiss' ? 'Saving…' : 'Not now'}
+                {acting === 'act_now' ? 'Saving…' : 'I will do this'}
               </button>
             </div>
           </>
