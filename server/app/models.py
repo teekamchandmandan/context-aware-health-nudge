@@ -20,6 +20,8 @@ class SignalType(str, Enum):
     meal_logged = "meal_logged"
     weight_logged = "weight_logged"
     mood_logged = "mood_logged"
+    water_logged = "water_logged"
+    sleep_logged = "sleep_logged"
 
 
 class NudgeState(str, Enum):
@@ -135,6 +137,12 @@ class SignalPayload(BaseModel):
     mood: str | None = None
     note: str | None = None
 
+    # water_logged
+    water_ml: float | None = None
+
+    # sleep_logged
+    sleep_hours: float | None = None
+
 
 class SignalRequest(BaseModel):
     signal_type: SignalType
@@ -154,6 +162,12 @@ class SignalRequest(BaseModel):
         elif self.signal_type == SignalType.mood_logged:
             if not p.mood:
                 raise ValueError("mood is required for mood_logged")
+        elif self.signal_type == SignalType.water_logged:
+            if p.water_ml is None:
+                raise ValueError("water_ml is required for water_logged")
+        elif self.signal_type == SignalType.sleep_logged:
+            if p.sleep_hours is None:
+                raise ValueError("sleep_hours is required for sleep_logged")
         return self
 
 

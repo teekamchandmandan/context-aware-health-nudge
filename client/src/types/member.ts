@@ -1,7 +1,12 @@
 // Enums
 export type NudgeState = 'active' | 'no_nudge' | 'escalated';
 export type ActionType = 'act_now' | 'dismiss' | 'ask_for_help';
-export type SignalType = 'meal_logged' | 'weight_logged' | 'mood_logged';
+export type SignalType =
+  | 'meal_logged'
+  | 'weight_logged'
+  | 'mood_logged'
+  | 'water_logged'
+  | 'sleep_logged';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type MoodValue = 'low' | 'neutral' | 'high';
 

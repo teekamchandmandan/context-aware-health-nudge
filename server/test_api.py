@@ -358,6 +358,32 @@ def test_signal_mood_logged():
     ok("mood in payload", r.json()["payload"]["mood"] == "good")
 
 
+def test_signal_water_logged():
+    section("POST /signals — water_logged")
+    seed()
+    r = client.post("/api/members/member_meal_01/signals", json={
+        "signal_type": "water_logged",
+        "payload": {"water_ml": 500}
+    })
+    ok("status 200", r.status_code == 200, f"got {r.status_code}")
+    data = r.json()
+    ok("signal_type is water_logged", data["signal_type"] == "water_logged")
+    ok("water_ml in payload", data["payload"]["water_ml"] == 500)
+
+
+def test_signal_sleep_logged():
+    section("POST /signals — sleep_logged")
+    seed()
+    r = client.post("/api/members/member_meal_01/signals", json={
+        "signal_type": "sleep_logged",
+        "payload": {"sleep_hours": 7.5}
+    })
+    ok("status 200", r.status_code == 200, f"got {r.status_code}")
+    data = r.json()
+    ok("signal_type is sleep_logged", data["signal_type"] == "sleep_logged")
+    ok("sleep_hours in payload", data["payload"]["sleep_hours"] == 7.5)
+
+
 def test_signal_422_missing_required():
     section("POST /signals — 422 for missing required fields")
     seed()
@@ -388,6 +414,20 @@ def test_signal_422_missing_required():
         "payload": {}
     })
     ok("422 without mood", r4.status_code == 422, f"got {r4.status_code}")
+
+    # water_logged without water_ml
+    r5 = client.post("/api/members/member_meal_01/signals", json={
+        "signal_type": "water_logged",
+        "payload": {}
+    })
+    ok("422 without water_ml", r5.status_code == 422, f"got {r5.status_code}")
+
+    # sleep_logged without sleep_hours
+    r6 = client.post("/api/members/member_meal_01/signals", json={
+        "signal_type": "sleep_logged",
+        "payload": {}
+    })
+    ok("422 without sleep_hours", r6.status_code == 422, f"got {r6.status_code}")
 
 
 def test_signal_422_unknown_type():
@@ -516,6 +556,8 @@ if __name__ == "__main__":
         test_signal_weight_logged,
         test_signal_re_evaluates_existing_active_nudge,
         test_signal_mood_logged,
+        test_signal_water_logged,
+        test_signal_sleep_logged,
         test_signal_422_missing_required,
         test_signal_422_unknown_type,
         test_signal_404_unknown_member,
