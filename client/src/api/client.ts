@@ -43,7 +43,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
 
   const headers = new Headers(init?.headers);
-  if (init?.body && !headers.has('Content-Type')) {
+  if (
+    init?.body &&
+    !(init.body instanceof FormData) &&
+    !headers.has('Content-Type')
+  ) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -107,6 +111,19 @@ export function postSignal(
     {
       method: 'POST',
       body: JSON.stringify({ signal_type: signalType, payload }),
+    },
+  );
+}
+
+export function postMealLog(
+  memberId: string,
+  formData: FormData,
+): Promise<SignalResponse> {
+  return request<SignalResponse>(
+    `/api/members/${encodeURIComponent(memberId)}/meal-logs`,
+    {
+      method: 'POST',
+      body: formData,
     },
   );
 }
