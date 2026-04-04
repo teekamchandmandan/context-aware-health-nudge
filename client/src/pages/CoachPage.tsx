@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   fetchCoachNudges,
   fetchCoachEscalations,
@@ -56,70 +55,78 @@ export default function CoachPage() {
     loadEscalations();
   }, [loadNudges, loadEscalations]);
 
+  function refreshAll() {
+    loadNudges();
+    loadEscalations();
+  }
+
+  const openCount = escalations.length;
+
   return (
-    <div className='min-h-screen bg-gray-50'>
-      <div className='max-w-6xl mx-auto px-4 py-8 space-y-6'>
-        {/* Header */}
-        <header className='flex items-center justify-between'>
-          <h1 className='text-xl font-bold text-gray-900'>Coach Dashboard</h1>
-          <Link
-            to='/member'
-            className='text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors'
+    <div className='min-h-screen text-[var(--color-text)]'>
+      <header className='relative z-20 mb-10 bg-[linear-gradient(180deg,rgba(255,255,255,0.28),rgba(255,255,255,0.08))] backdrop-blur-sm'>
+        <div className='mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8'>
+          <p className='font-headline text-3xl font-extrabold leading-none tracking-[-0.05em] text-[var(--color-primary)] sm:text-[2.6rem]'>
+            Health Nudge
+          </p>
+          <button
+            type='button'
+            onClick={refreshAll}
+            className='rounded-full border border-white/70 bg-white/85 px-4 py-2 text-sm font-semibold text-[var(--color-primary)] shadow-[0_10px_30px_rgba(25,28,29,0.08)] transition hover:border-[var(--color-primary)] hover:bg-white'
           >
-            ← Member view
-          </Link>
-        </header>
-
-        {/* Two-column layout on large screens, stacked on small */}
-        <div className='grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6'>
-          {/* Left: Escalations */}
-          <section>
-            <h2 className='text-base font-semibold text-gray-900 mb-3'>
-              Open Escalations
-              {!escalationsLoading && !escalationsError && (
-                <span className='ml-2 text-sm font-normal text-gray-400'>
-                  ({escalations.length})
-                </span>
-              )}
-            </h2>
-
-            {escalationsLoading && <Spinner />}
-
-            {!escalationsLoading && escalationsError && (
-              <SectionError
-                message={escalationsError}
-                onRetry={loadEscalations}
-              />
-            )}
-
-            {!escalationsLoading && !escalationsError && (
-              <CoachEscalationsList items={escalations} />
-            )}
-          </section>
-
-          {/* Right: Recent nudges */}
-          <section>
-            <h2 className='text-base font-semibold text-gray-900 mb-3'>
-              Recent Nudges
-              {!nudgesLoading && !nudgesError && (
-                <span className='ml-2 text-sm font-normal text-gray-400'>
-                  ({nudges.length})
-                </span>
-              )}
-            </h2>
-
-            {nudgesLoading && <Spinner />}
-
-            {!nudgesLoading && nudgesError && (
-              <SectionError message={nudgesError} onRetry={loadNudges} />
-            )}
-
-            {!nudgesLoading && !nudgesError && (
-              <CoachNudgesList items={nudges} />
-            )}
-          </section>
+            Refresh
+          </button>
         </div>
-      </div>
+      </header>
+
+      <main className='mx-auto max-w-5xl px-4 pb-12 pt-6 sm:px-6 lg:px-8 lg:pb-16'>
+        <section className='mb-8'>
+          <h1 className='font-headline text-3xl font-extrabold tracking-[-0.04em] text-[var(--color-primary)] sm:text-4xl'>
+            Good to see you, Coach
+          </h1>
+          <p className='mt-2 text-base text-[var(--color-muted)]'>
+            {escalationsLoading
+              ? 'Checking for open escalations…'
+              : openCount === 0
+                ? 'No open escalations right now.'
+                : `${openCount} open escalation${openCount === 1 ? '' : 's'}`}
+          </p>
+        </section>
+
+        <section className='mb-10'>
+          {escalationsLoading && <Spinner />}
+
+          {!escalationsLoading && escalationsError && (
+            <SectionError
+              message={escalationsError}
+              onRetry={loadEscalations}
+            />
+          )}
+
+          {!escalationsLoading && !escalationsError && (
+            <CoachEscalationsList items={escalations} />
+          )}
+        </section>
+
+        <section>
+          <h2 className='mb-4 font-headline text-xl font-bold tracking-[-0.04em] text-[var(--color-primary)]'>
+            Recent nudges
+            {!nudgesLoading && !nudgesError && (
+              <span className='ml-2 text-base font-normal text-[var(--color-muted)]'>
+                ({nudges.length})
+              </span>
+            )}
+          </h2>
+
+          {nudgesLoading && <Spinner />}
+
+          {!nudgesLoading && nudgesError && (
+            <SectionError message={nudgesError} onRetry={loadNudges} />
+          )}
+
+          {!nudgesLoading && !nudgesError && <CoachNudgesList items={nudges} />}
+        </section>
+      </main>
     </div>
   );
 }
