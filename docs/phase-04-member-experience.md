@@ -12,6 +12,8 @@ Implement the member-facing flow that shows one personalized nudge, explains why
 
 This is the primary assignment experience. It should feel clear and trustworthy without adding unnecessary product breadth.
 
+This route is distinct from the coach experience and should remain member-only in both content and navigation.
+
 ## Dependencies
 
 - [phase-03-api-contracts.md](./phase-03-api-contracts.md)
@@ -48,16 +50,23 @@ This is the primary assignment experience. It should feel clear and trustworthy 
 - Provide a lightweight seeded-member switcher at the top of the page so reviewers can move between scenarios without auth.
 - Default to the meal scenario member on first load.
 - Make it easy to trigger or resolve at least one scenario through fresh member input instead of relying only on seeded outcomes.
+- Keep the member route visually and behaviorally separate from the coach route; do not add direct in-product links from the member page into coach review.
 
 ## UX Requirements
 
 - Keep the page focused on one active nudge.
+- Strengthen the information hierarchy so the active nudge is the dominant focal surface and quick logging remains supportive rather than competitive.
 - Keep signal logging lightweight and adjacent to the nudge card rather than turning the page into a broad dashboard.
 - Use plain, calm language that avoids diagnosis or overclaiming.
 - Make the explanation legible and visibly separate from the main recommendation.
 - Reflect action results immediately so the user is not left uncertain about what happened.
 - Prefer a centered card layout with the recommendation, explanation, and three actions visible without scrolling on a laptop.
 - Provide a reliable structured fallback for meal logging even if photo capture is available.
+- Do not surface coach-only controls, coach-facing reasoning details, or direct coach navigation in the member route.
+
+## Design Adaptation Note
+
+The redesign pass may use the Stitch screen `Member Dashboard - Desktop` (`88190d7e686247f8b74d1a88f9791d90`) from project `18374012017328105154` as a guiding layout reference. Adapt the visual direction to this product's single-nudge flow rather than copying the source literally.
 
 ## Required UI States
 
@@ -102,6 +111,7 @@ Suggested state copy is intentionally simple:
 - Keep the member flow resilient to empty or low-confidence states returned by the backend.
 - The shipped Phase 04 flow uses structured meal entry only; photo capture remains optional future scope as long as the structured path stays available.
 - Prefer server-confirmed actions over optimistic updates because trust matters more than speed in this flow.
+- Seeded member switching is allowed for the demo, but cross-view shortcuts between member and coach should not be part of the intended member UX.
 
 ## Recommended Work Breakdown
 
@@ -130,6 +140,7 @@ Suggested state copy is intentionally simple:
 - Submit a fresh weight, mood, or meal signal and confirm the next nudge fetch reflects the new context.
 - Trigger each action type and confirm the page updates correctly.
 - Verify `ask_for_help` produces a visible confirmation even before coach review is opened.
+- Confirm the member UI does not expose a direct navigation path into the coach route.
 - Confirm no extra product surface has been added beyond the required member flow.
 - Confirm the page still works correctly for `state: "escalated"` with no visible nudge card.
 

@@ -6,7 +6,7 @@ interface Props {
 }
 
 const SOURCE_LABELS: Record<string, string> = {
-  member_action: 'Member requested help',
+  member_action: 'Member asked for help',
   low_confidence: 'Low confidence',
   rule_engine: 'Rule engine',
 };
@@ -18,39 +18,55 @@ function sourceLabel(source: string | null): string {
 export default function CoachEscalationsList({ items }: Props) {
   if (items.length === 0) {
     return (
-      <div className='bg-white rounded-xl border border-gray-200 p-6 text-center'>
-        <p className='text-gray-500'>No open escalations right now.</p>
+      <div className='rounded-[1.75rem] border border-white/80 bg-[rgba(255,255,255,0.82)] p-8 text-center shadow-[0_16px_48px_rgba(25,28,29,0.05)] backdrop-blur-xl'>
+        <p className='font-headline text-lg font-bold tracking-[-0.03em] text-[var(--color-primary)]'>
+          No open escalations
+        </p>
+        <p className='mt-2 text-sm text-[var(--color-muted)]'>
+          All members are on track right now.
+        </p>
       </div>
     );
   }
 
   return (
-    <ul className='space-y-3'>
-      {items.map((esc) => (
-        <li
-          key={esc.escalation_id}
-          className='bg-white rounded-xl border border-amber-200 p-4 space-y-2'
-        >
-          <div className='flex items-start justify-between gap-2'>
-            <p className='text-sm font-semibold text-gray-900'>
-              {esc.member_name}
+    <ul className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+      {items.map((esc) => {
+        const isMemberRequest = esc.source === 'member_action';
+        return (
+          <li
+            key={esc.escalation_id}
+            className={`rounded-[1.75rem] border p-5 shadow-[0_16px_48px_rgba(25,28,29,0.05)] backdrop-blur-xl ${
+              isMemberRequest
+                ? 'border-[#f2dba8] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,241,214,0.9))]'
+                : 'border-white/80 bg-[rgba(255,255,255,0.82)]'
+            }`}
+          >
+            <div className='flex items-start justify-between gap-2'>
+              <p className='font-headline text-base font-bold tracking-[-0.03em] text-[var(--color-primary)]'>
+                {esc.member_name}
+              </p>
+              <span
+                className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+                  isMemberRequest
+                    ? 'bg-[rgba(255,209,102,0.3)] text-[var(--color-warning-text)]'
+                    : 'bg-[rgba(186,26,26,0.1)] text-[var(--color-error)]'
+                }`}
+              >
+                {sourceLabel(esc.source)}
+              </span>
+            </div>
+            {esc.reason && (
+              <p className='mt-3 text-sm leading-relaxed text-[var(--color-muted)]'>
+                {esc.reason}
+              </p>
+            )}
+            <p className='mt-3 text-xs text-[var(--color-muted)]'>
+              Escalated {formatTimestamp(esc.created_at)}
             </p>
-            <span
-              className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${
-                esc.source === 'member_action'
-                  ? 'bg-amber-100 text-amber-800'
-                  : 'bg-red-100 text-red-800'
-              }`}
-            >
-              {sourceLabel(esc.source)}
-            </span>
-          </div>
-          {esc.reason && <p className='text-sm text-gray-700'>{esc.reason}</p>}
-          <p className='text-xs text-gray-400'>
-            {formatTimestamp(esc.created_at)}
-          </p>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ul>
   );
 }

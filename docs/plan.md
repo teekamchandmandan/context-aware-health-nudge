@@ -2,7 +2,7 @@
 
 ## 1. Objective
 
-This project will deliver the Digbi Health assignment as a focused end-to-end vertical slice. The slice should show a personalized nudge, explain why it appeared, handle confidence explicitly, escalate safely to a coach when needed, expose that activity in a coach view, and keep a clear audit trail. LLM usage is allowed only as a phrasing layer, never as the source of truth for decisioning.
+This project will deliver a focused end-to-end vertical slice. The slice should show a personalized nudge, explain why it appeared, handle confidence explicitly, escalate safely to a coach when needed, expose that activity in a coach view, and keep a clear audit trail. LLM usage is allowed only as a phrasing layer, never as the source of truth for decisioning.
 
 Member profiles and baseline history may be seeded, but the visible nudge flow should still respond to fresh member-entered signals during the demo.
 

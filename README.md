@@ -1,6 +1,6 @@
 # Context-Aware Health Nudge
 
-This repository contains the Digbi Health product engineering assignment for a focused Context-Aware Health Nudge vertical slice.
+This repository contains a focused Context-Aware Health Nudge vertical slice.
 
 ## Source of Truth
 
@@ -154,6 +154,16 @@ The client includes both member and coach surfaces. The member card shows phrasi
 1. Review `docs/assignment.md` for the assignment brief.
 2. Review `docs/plan.md` for the current implementation direction.
 3. Use the phase files as the branch-by-branch execution plan.
+
+## Demo Reset (Admin Only)
+
+The member and coach UIs do not expose a reset control — neither role should need to know the database can be wiped. To reset the database to its seeded state during a demo or review session, run the following command while the backend is running:
+
+```bash
+curl -X POST http://127.0.0.1:8000/debug/reset-seed
+```
+
+This endpoint is only available when `DEBUG=true` is set in `server/.env`. It re-runs the seed script, restoring all seeded members, signals, and nudges to their original state.
 
 ## What Is Intended To Be Built
 
