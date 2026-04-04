@@ -22,14 +22,18 @@ function ToastBubble({
   useEffect(() => {
     // trigger enter animation on next frame
     const raf = requestAnimationFrame(() => setVisible(true));
+    let exitTimer: ReturnType<typeof setTimeout> | undefined;
     const timer = setTimeout(() => {
       setVisible(false);
       // wait for exit animation before removing
-      setTimeout(onDone, 300);
+      exitTimer = setTimeout(onDone, 300);
     }, 3000);
     return () => {
       cancelAnimationFrame(raf);
       clearTimeout(timer);
+      if (exitTimer !== undefined) {
+        clearTimeout(exitTimer);
+      }
     };
   }, [onDone]);
 
