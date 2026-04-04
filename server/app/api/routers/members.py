@@ -1,5 +1,7 @@
 from typing import Annotated
+from functools import partial
 
+import anyio
 from fastapi import APIRouter, File, Form, Path, UploadFile
 
 from app.api.deps import DbDep, get_member_or_404
@@ -83,10 +85,13 @@ async def post_meal_draft(
     get_member_or_404(conn, member_id)
 
     photo_bytes, photo_content_type = await read_meal_photo(photo, require_image=False)
-    return create_meal_draft_response(
-        description,
-        photo_bytes=photo_bytes,
-        photo_content_type=photo_content_type,
+    return await anyio.to_thread.run_sync(
+        partial(
+            create_meal_draft_response,
+            description,
+            photo_bytes=photo_bytes,
+            photo_content_type=photo_content_type,
+        )
     )
 
 
@@ -108,10 +113,13 @@ async def post_member_meal_log(
     photo_bytes, photo_content_type = await read_meal_photo(photo, require_image=True)
 
     analysis_input = meal_input.description or meal_input.meal_name or "Meal photo upload"
-    meal_analysis = create_meal_draft_response(
-        analysis_input,
-        photo_bytes=photo_bytes,
-        photo_content_type=photo_content_type,
+    meal_analysis = await anyio.to_thread.run_sync(
+        partial(
+            create_meal_draft_response,
+            analysis_input,
+            photo_bytes=photo_bytes,
+            photo_content_type=photo_content_type,
+        )
     )
 
     return persist_signal(

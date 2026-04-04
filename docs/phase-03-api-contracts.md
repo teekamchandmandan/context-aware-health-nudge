@@ -119,13 +119,15 @@ Empty and escalated cases should stay explicit instead of relying on `204`:
 ## Signal Intake Contract
 
 - Allowed `signal_type` values are `meal_logged`, `weight_logged`, and `mood_logged`.
-- Minimum payload fields:
-  - `meal_logged`: `meal_input_method` and at least one of `description`, `meal_name`, or `meal_type`
+- `meal_logged` accepts two distinct payload shapes:
+  - **Description-first (new):** requires `meal_input_method` and at least one of `description`, `meal_name`, or `meal_type`. Used by the one-step `POST /api/members/{member_id}/meal-logs` endpoint.
+  - **Legacy structured:** requires `meal_type` plus at least one of `carbs_g` or `meal_tag`. `meal_input_method` is not required in this shape.
+- Minimum payload fields for other signal types:
   - `weight_logged`: `weight_lb`
   - `mood_logged`: `mood`
 - Optional payload fields:
   - `meal_logged`: `meal_type`, `meal_name`, `description`, `carbs_g`, `protein_g`, `photo_attached`, `analysis_summary`, `analysis_confidence`, `analysis_status`, `analysis_source`
-  - `meal_logged` legacy compatibility: `analysis_confirmed`
+  - `meal_logged` legacy compatibility: `analysis_confirmed`, `meal_tag`
   - `mood_logged`: `note`
 - Reject unknown signal types or missing required payload fields with `422`.
 

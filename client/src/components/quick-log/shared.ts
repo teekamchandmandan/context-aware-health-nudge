@@ -63,7 +63,7 @@ export function getValidationMessage(error: ApiError): string | null {
 export function getRequestErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 404) {
-      console.error('Signal endpoint returned 404', error.body);
+      console.error('Request endpoint returned 404', error.body);
     }
 
     if (error.status === 0 || error.status === 404 || error.status >= 500) {

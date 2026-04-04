@@ -7,6 +7,8 @@ from pydantic import ValidationError
 
 from app.models.meals import MealDraftResponse, MealLogInput
 
+MAX_PHOTO_BYTES = 10 * 1024 * 1024  # 10 MB
+
 
 def _get_create_meal_draft():
     main_module = import_module("app.main")
@@ -25,7 +27,11 @@ async def read_meal_photo(
     if require_image and not photo_content_type.startswith("image/"):
         raise HTTPException(status_code=422, detail="meal photo must be an image")
 
-    return await photo.read(), photo_content_type or None
+    data = await photo.read()
+    if len(data) > MAX_PHOTO_BYTES:
+        raise HTTPException(status_code=413, detail="meal photo exceeds 10 MB limit")
+
+    return data, photo_content_type or None
 
 
 def validate_meal_log_input(
