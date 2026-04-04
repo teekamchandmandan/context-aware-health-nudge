@@ -80,7 +80,7 @@ Return only JSON with content and explanation.
 - The LLM receives only the minimum structured context needed for phrasing.
 - Output must stay short, practical, and non-diagnostic.
 - Any photo-assisted or note-assisted flow must degrade cleanly to deterministic structured inputs without blocking the member experience.
-- Detailed meal explanations should only reference meal name or macro values that were persisted on the saved meal signal.
+- Detailed meal explanations should only reference meal type or macro values that were persisted on the saved meal signal.
 - Any failed validation should route to deterministic templates.
 - The system should remain fully usable without an API key.
 - The phrasing source should be visible to backend logs and audit events as `template` or `llm`.

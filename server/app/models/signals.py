@@ -10,7 +10,6 @@ class SignalPayload(BaseModel):
 
     meal_input_method: str | None = None
     meal_type: str | None = None
-    meal_name: str | None = None
     description: str | None = None
     carbs_g: float | None = None
     meal_tag: str | None = None
@@ -45,7 +44,6 @@ class SignalRequest(BaseModel):
             )
             description_first_payload = bool(payload.meal_input_method) and bool(
                 (payload.description and payload.description.strip())
-                or (payload.meal_name and payload.meal_name.strip())
                 or (payload.meal_type and payload.meal_type.strip())
             )
             if not (legacy_payload or description_first_payload):

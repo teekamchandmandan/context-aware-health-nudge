@@ -99,20 +99,18 @@ async def post_meal_draft(
 async def post_member_meal_log(
     member_id: Annotated[str, Path()],
     conn: DbDep,
-    meal_name: Annotated[str | None, Form(max_length=120)] = None,
     description: Annotated[str | None, Form(max_length=500)] = None,
     photo: Annotated[UploadFile | None, File()] = None,
 ) -> SignalResponse:
     get_member_or_404(conn, member_id)
 
     meal_input = validate_meal_log_input(
-        meal_name=meal_name,
         description=description,
         photo_attached=photo is not None,
     )
     photo_bytes, photo_content_type = await read_meal_photo(photo, require_image=True)
 
-    analysis_input = meal_input.description or meal_input.meal_name or "Meal photo upload"
+    analysis_input = meal_input.description or "Meal photo upload"
     meal_analysis = await anyio.to_thread.run_sync(
         partial(
             create_meal_draft_response,

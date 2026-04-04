@@ -120,13 +120,13 @@ Empty and escalated cases should stay explicit instead of relying on `204`:
 
 - Allowed `signal_type` values are `meal_logged`, `weight_logged`, and `mood_logged`.
 - `meal_logged` accepts two distinct payload shapes:
-  - **Description-first (new):** requires `meal_input_method` and at least one of `description`, `meal_name`, or `meal_type`. Used by the one-step `POST /api/members/{member_id}/meal-logs` endpoint.
+  - **Description-first (new):** requires `meal_input_method` and at least one of `description` or `meal_type`. Used by the one-step `POST /api/members/{member_id}/meal-logs` endpoint.
   - **Legacy structured:** requires `meal_type` plus at least one of `carbs_g` or `meal_tag`. `meal_input_method` is not required in this shape.
 - Minimum payload fields for other signal types:
   - `weight_logged`: `weight_lb`
   - `mood_logged`: `mood`
 - Optional payload fields:
-  - `meal_logged`: `meal_type`, `meal_name`, `description`, `carbs_g`, `protein_g`, `photo_attached`, `analysis_summary`, `analysis_confidence`, `analysis_status`, `analysis_source`
+  - `meal_logged`: `meal_type`, `description`, `carbs_g`, `protein_g`, `photo_attached`, `analysis_summary`, `analysis_confidence`, `analysis_status`, `analysis_source`
   - `meal_logged` legacy compatibility: `analysis_confirmed`, `meal_tag`
   - `mood_logged`: `note`
 - Reject unknown signal types or missing required payload fields with `422`.
@@ -137,10 +137,10 @@ Use a dedicated one-step meal logging endpoint for the member meal flow so photo
 
 ### `POST /api/members/{member_id}/meal-logs`
 
-- Accept a multipart form payload with optional `meal_name`, optional `description`, and optional `photo` file.
+- Accept a multipart form payload with optional `description` and optional `photo` file.
 - Require at least one of `description` or `photo`.
 - Run backend meal analysis synchronously, persist the final `meal_logged` signal, and return the stored signal payload.
-- The saved payload may include inferred `meal_name`, `meal_type`, `carbs_g`, `protein_g`, a short `analysis_summary`, and an `analysis_source` of `llm` or `fallback`.
+- The saved payload may include inferred `meal_type`, `carbs_g`, `protein_g`, a short `analysis_summary`, and an `analysis_source` of `llm` or `fallback`.
 - Meal photos are transient analysis inputs only in this assignment build. Add a production note that a real product may persist uploaded photos for later member review.
 - If provider analysis fails, still save the meal with the raw member input and any deterministic fallback guesses instead of blocking the member flow.
 

@@ -7,7 +7,7 @@ from app.core.config import MEAL_ANALYSIS_TIMEOUT_SECONDS, OPENAI_MODEL
 
 SYSTEM_PROMPT = (
     "You extract structured meal details from a member's meal description and optional food image. "
-    "Return only JSON with meal_name, meal_type, carbs_g, protein_g, analysis_summary, analysis_confidence, analysis_status, and analysis_source. "
+    "Return only JSON with meal_type, carbs_g, protein_g, analysis_summary, analysis_confidence, analysis_status, and analysis_source. "
     "Use short, plain language. If you are uncertain, omit fields instead of inventing them. "
     "This output may be saved directly on the meal log, so keep estimates cautious and clearly marked as approximate."
 )
@@ -65,7 +65,7 @@ def build_user_content(
                 {
                     "description": description,
                     "instructions": [
-                        "Infer meal_name, meal_type, carbs_g, and protein_g only when reasonably supported.",
+                        "Infer meal_type, carbs_g, and protein_g only when reasonably supported.",
                         "Use analysis_status='estimated' when you include nutrition estimates.",
                         "Use analysis_status='partial' when you are unsure or only have limited structure.",
                         "Set analysis_source='llm'.",

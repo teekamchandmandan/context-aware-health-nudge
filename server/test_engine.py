@@ -369,7 +369,6 @@ def test_description_first_meal_requires_confirmation():
                 {
                     "meal_input_method": "description",
                     "description": "Big bowl of pasta",
-                    "meal_name": "Pasta bowl",
                     "carbs_g": 82,
                     "analysis_source": "fallback",
                     "analysis_confirmed": False,
@@ -393,7 +392,6 @@ def test_description_first_meal_requires_confirmation():
                 {
                     "meal_input_method": "description",
                     "description": "Big bowl of pasta",
-                    "meal_name": "Pasta bowl",
                     "meal_type": "dinner",
                     "carbs_g": 82,
                     "protein_g": 18,
@@ -409,8 +407,8 @@ def test_description_first_meal_requires_confirmation():
     confirmed = check_meal_goal_mismatch(conn, "member_weight_01")
     ok("confirmed meal triggers guidance", confirmed is not None)
     ok(
-        "confirmed explanation basis uses meal name",
-        confirmed is not None and "Pasta bowl" in confirmed.explanation_basis,
+        "confirmed explanation basis uses meal type",
+        confirmed is not None and "Dinner meal" in confirmed.explanation_basis,
         f"got {confirmed.explanation_basis if confirmed else 'None'}",
     )
 
@@ -431,7 +429,7 @@ def test_one_step_meal_input_is_trusted():
             json.dumps(
                 {
                     "meal_input_method": "one_step_with_photo",
-                    "meal_name": "Pasta bowl",
+                    "meal_type": "dinner",
                     "photo_attached": True,
                     "carbs_g": 82,
                     "analysis_source": "llm",
@@ -445,8 +443,8 @@ def test_one_step_meal_input_is_trusted():
     candidate = check_meal_goal_mismatch(conn, "member_weight_01")
     ok("one-step meal triggers guidance", candidate is not None)
     ok(
-        "one-step explanation uses meal name",
-        candidate is not None and "Pasta bowl" in candidate.explanation_basis,
+        "one-step explanation uses meal type",
+        candidate is not None and "Dinner meal" in candidate.explanation_basis,
         f"got {candidate.explanation_basis if candidate else 'None'}",
     )
 

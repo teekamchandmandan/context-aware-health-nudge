@@ -3,42 +3,36 @@ from app.models.meals import MealDraftResponse
 FALLBACK_MEAL_PATTERNS: tuple[dict[str, object], ...] = (
     {
         "keywords": ("pasta", "carbonara", "spaghetti", "noodles"),
-        "meal_name": "Pasta dish",
         "meal_type": "dinner",
         "carbs_g": 72,
         "protein_g": 22,
     },
     {
         "keywords": ("pizza",),
-        "meal_name": "Pizza",
         "meal_type": "dinner",
         "carbs_g": 68,
         "protein_g": 24,
     },
     {
         "keywords": ("burrito", "taco", "quesadilla"),
-        "meal_name": "Mexican-style meal",
         "meal_type": "lunch",
         "carbs_g": 58,
         "protein_g": 21,
     },
     {
         "keywords": ("salad",),
-        "meal_name": "Salad",
         "meal_type": "lunch",
         "carbs_g": 18,
         "protein_g": 10,
     },
     {
         "keywords": ("oatmeal", "porridge", "granola"),
-        "meal_name": "Breakfast bowl",
         "meal_type": "breakfast",
         "carbs_g": 30,
         "protein_g": 8,
     },
     {
         "keywords": ("smoothie", "banana", "yogurt"),
-        "meal_name": "Snack or smoothie",
         "meal_type": "snack",
         "carbs_g": 26,
         "protein_g": 11,
@@ -64,14 +58,12 @@ def fallback_meal_draft(description: str, *, photo_attached: bool) -> MealDraftR
         None,
     )
 
-    meal_name = None
     meal_type = infer_meal_type(lower_description)
     carbs_g = None
     protein_g = None
     confidence = 0.28
 
     if inferred is not None:
-        meal_name = str(inferred["meal_name"])
         meal_type = str(inferred["meal_type"])
         carbs_g = float(inferred["carbs_g"])
         protein_g = float(inferred["protein_g"])
@@ -85,7 +77,6 @@ def fallback_meal_draft(description: str, *, photo_attached: bool) -> MealDraftR
 
     return MealDraftResponse(
         description=description,
-        meal_name=meal_name,
         meal_type=meal_type,
         carbs_g=carbs_g,
         protein_g=protein_g,

@@ -94,7 +94,6 @@ Suggested state copy is intentionally simple:
 | Quick log an update                              |
 | - weight input                                   |
 | - mood toggle + optional note                    |
-| - optional meal name                             |
 | - meal description + optional photo preview      |
 |                                                  |
 |  Personalized nudge card                         |

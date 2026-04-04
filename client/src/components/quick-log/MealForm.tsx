@@ -16,7 +16,6 @@ export default function MealForm({
   onError,
   clearFeedback,
 }: FormProps) {
-  const [mealName, setMealName] = useState('');
   const [description, setDescription] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
@@ -81,9 +80,6 @@ export default function MealForm({
     }
 
     const formData = new FormData();
-    if (mealName.trim()) {
-      formData.append('meal_name', mealName.trim());
-    }
     if (description.trim()) {
       formData.append('description', description.trim());
     }
@@ -94,7 +90,6 @@ export default function MealForm({
     setSubmitting(true);
     try {
       await postMealLog(memberId, formData);
-      setMealName('');
       setDescription('');
       clearPhotoSelection();
       setFieldErrors({});
@@ -121,25 +116,6 @@ export default function MealForm({
     <form onSubmit={handleSubmit} className='flex flex-1 flex-col gap-4'>
       <div>
         <label
-          htmlFor='meal-name-input'
-          className='mb-2 block text-sm font-medium text-[var(--color-muted)]'
-        >
-          Meal name (optional)
-        </label>
-        <input
-          id='meal-name-input'
-          name='meal_name'
-          type='text'
-          autoComplete='off'
-          value={mealName}
-          onChange={(event) => setMealName(event.target.value)}
-          className={INPUT_CLASSES}
-          placeholder='e.g. Pasta carbonara'
-        />
-      </div>
-
-      <div>
-        <label
           htmlFor='meal-description'
           className='mb-2 block text-sm font-medium text-[var(--color-muted)]'
         >
@@ -153,7 +129,7 @@ export default function MealForm({
           value={description}
           onChange={handleDescriptionChange}
           className={`${INPUT_CLASSES} resize-none`}
-          placeholder='Add details if helpful. You can also log with just a photo.'
+          placeholder='Describe what you ate, or just upload a photo.'
         />
         {fieldErrors.description && (
           <p className='mt-2 text-sm text-[var(--color-error)]'>
@@ -211,22 +187,6 @@ export default function MealForm({
           />
         </div>
       )}
-
-      <div className='rounded-[1.25rem] border border-[rgba(190,200,200,0.75)] bg-[rgba(247,250,250,0.92)] p-4'>
-        <p className='text-sm font-semibold text-[var(--color-primary)]'>
-          One-step meal log
-        </p>
-        <p className='mt-2 text-sm leading-6 text-[var(--color-muted)]'>
-          The backend analyzes your details and optional photo, then saves the
-          structured meal in one step. Meal type, carbs, and protein are
-          extracted automatically when possible.
-        </p>
-        <p className='mt-3 text-xs leading-6 text-[var(--color-muted)]'>
-          Assignment note: uploaded photos are used for this submission only and
-          are not kept after analysis. In a production product, we would likely
-          persist meal photos so members can review past uploads.
-        </p>
-      </div>
 
       <button
         type='submit'

@@ -327,7 +327,6 @@ def test_signal_meal_logged_description_first():
         "payload": {
             "meal_input_method": "description",
             "description": "Turkey sandwich and an apple",
-            "meal_name": "Turkey sandwich lunch",
             "meal_type": "lunch",
             "carbs_g": 42,
             "protein_g": 24,
@@ -344,7 +343,7 @@ def test_signal_meal_logged_description_first():
     ok("signal_type is meal_logged", data["signal_type"] == "meal_logged")
     ok("payload stores description", data["payload"]["description"] == "Turkey sandwich and an apple")
     ok("payload stores analysis_confirmed", data["payload"]["analysis_confirmed"] is True)
-    ok("payload stores meal_name", data["payload"]["meal_name"] == "Turkey sandwich lunch")
+    ok("payload stores meal_type", data["payload"]["meal_type"] == "lunch")
 
 
 def test_meal_log_one_step_description_only():
@@ -353,14 +352,14 @@ def test_meal_log_one_step_description_only():
 
     r = client.post(
         "/api/members/member_meal_01/meal-logs",
-        data={"meal_name": "Pasta dinner", "description": "Pasta carbonara with garlic bread"},
+        data={"description": "Pasta carbonara with garlic bread"},
     )
     ok("status 200", r.status_code == 200, f"got {r.status_code}")
     data = r.json()
     ok("signal_type is meal_logged", data["signal_type"] == "meal_logged")
     ok("input method is one_step", data["payload"]["meal_input_method"] == "one_step")
     ok("description saved", data["payload"]["description"] == "Pasta carbonara with garlic bread")
-    ok("meal name saved", data["payload"]["meal_name"] == "Pasta dinner")
+    ok("meal type inferred", data["payload"]["meal_type"] == "dinner")
     ok("carbs inferred", data["payload"]["carbs_g"] == 72.0, f"got {data['payload'].get('carbs_g')!r}")
 
 
@@ -372,7 +371,6 @@ def test_meal_log_one_step_photo_only():
         "app.main.create_meal_draft",
         return_value=MealDraftResponse(
             description="Meal photo upload",
-            meal_name="Chicken salad",
             meal_type="lunch",
             carbs_g=16,
             protein_g=28,
@@ -392,7 +390,7 @@ def test_meal_log_one_step_photo_only():
     data = r.json()
     ok("photo attached saved", data["payload"]["photo_attached"] is True)
     ok("input method is one_step_with_photo", data["payload"]["meal_input_method"] == "one_step_with_photo")
-    ok("analysis meal name saved", data["payload"]["meal_name"] == "Chicken salad")
+    ok("analysis meal type saved", data["payload"]["meal_type"] == "lunch")
     ok("analysis carbs saved", data["payload"]["carbs_g"] == 16)
 
 
@@ -402,7 +400,6 @@ def test_meal_log_requires_description_or_photo():
 
     r = client.post(
         "/api/members/member_meal_01/meal-logs",
-        data={"meal_name": "Optional name only"},
     )
     ok("status 422", r.status_code == 422, f"got {r.status_code}")
     ok(

@@ -36,13 +36,11 @@ async def read_meal_photo(
 
 def validate_meal_log_input(
     *,
-    meal_name: str | None,
     description: str | None,
     photo_attached: bool,
 ) -> MealLogInput:
     try:
         return MealLogInput(
-            meal_name=meal_name,
             description=description,
             photo_attached=photo_attached,
         )
@@ -75,8 +73,6 @@ def build_meal_log_payload(
         "analysis_status": meal_analysis.analysis_status,
     }
 
-    if meal_input.meal_name or meal_analysis.meal_name:
-        payload_dict["meal_name"] = meal_input.meal_name or meal_analysis.meal_name
     if meal_input.description:
         payload_dict["description"] = meal_input.description
     if meal_analysis.meal_type:

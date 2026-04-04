@@ -40,17 +40,33 @@ def check_meal_goal_mismatch(conn: sqlite3.Connection, member_id: str) -> NudgeC
     if carbs is None or carbs < MEAL_CARB_THRESHOLD:
         return None
 
-    meal_name = payload.get("meal_name") or payload.get("meal") or "Recent meal"
+    meal_label = _get_meal_label(payload)
     return NudgeCandidate(
         nudge_type="meal_guidance",
         matched_reason="meal_goal_mismatch",
-        explanation_basis=f"{meal_name} logged {carbs}g carbs; goal is low_carb (<{MEAL_CARB_THRESHOLD}g)",
+        explanation_basis=f"{meal_label} logged {carbs}g carbs; goal is low_carb (<{MEAL_CARB_THRESHOLD}g)",
         confidence=0.86,
         escalation_recommended=False,
         source_signal_ids=[signal["id"]],
         priority=PRIORITY["meal_guidance"],
         latest_signal_ts=signal["created_at"],
     )
+
+
+def _get_meal_label(payload: dict) -> str:
+    meal_type = payload.get("meal_type")
+    if isinstance(meal_type, str):
+        normalized_meal_type = meal_type.strip().lower()
+        if normalized_meal_type:
+            return f"{normalized_meal_type.capitalize()} meal"
+
+    legacy_meal = payload.get("meal")
+    if isinstance(legacy_meal, str):
+        normalized_legacy_meal = legacy_meal.strip()
+        if normalized_legacy_meal:
+            return normalized_legacy_meal
+
+    return "Recent meal"
 
 
 def meal_fields_confirmed(payload: dict) -> bool:
