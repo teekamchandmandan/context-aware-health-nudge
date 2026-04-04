@@ -1,0 +1,1 @@
+"""Observability helpers for audit persistence and structured logging."""
