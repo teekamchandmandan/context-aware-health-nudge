@@ -140,7 +140,7 @@ export default function MealForm({
           }`}
         >
           <div className='mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(190,200,200,0.2)] text-lg text-[var(--color-muted)]'>
-            📷
+            <span aria-hidden='true'>📷</span>
           </div>
           <p className='text-sm font-semibold text-[var(--color-text)]'>
             Add a photo of your meal

@@ -27,7 +27,7 @@ export interface NudgeDetail {
 export interface MemberNudgeResponse {
   state: NudgeState;
   member: MemberRef;
-  nudge: NudgeDetail | null;
+  nudge?: NudgeDetail | null;
 }
 
 export interface ActionResponse {

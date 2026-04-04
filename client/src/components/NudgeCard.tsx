@@ -142,13 +142,13 @@ export default function NudgeCard({ nudge, onActionComplete }: Props) {
                 {error}
               </p>
             )}
-            <div className='flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3'>
+            <div className='flex flex-col sm:flex-row-reverse sm:items-center sm:justify-start gap-3'>
               <button
-                onClick={() => handleAction('dismiss')}
+                onClick={() => handleAction('act_now')}
                 disabled={acting !== null}
-                className='inline-flex items-center justify-center rounded-xl bg-[var(--color-surface)] px-5 py-2.5 text-sm font-semibold text-[var(--color-muted)] ring-1 ring-inset ring-[var(--color-border)] transition-all hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-primary)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100'
+                className='inline-flex items-center justify-center rounded-xl bg-[var(--color-primary)] px-6 py-2.5 text-sm font-semibold text-[var(--color-surface)] shadow-md transition-all hover:bg-[var(--color-primary-strong)] hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100'
               >
-                {acting === 'dismiss' ? 'Saving…' : 'Not now'}
+                {acting === 'act_now' ? 'Saving…' : 'I will do this'}
               </button>
               <button
                 onClick={() => handleAction('ask_for_help')}
@@ -158,11 +158,11 @@ export default function NudgeCard({ nudge, onActionComplete }: Props) {
                 {acting === 'ask_for_help' ? 'Saving…' : 'I need support'}
               </button>
               <button
-                onClick={() => handleAction('act_now')}
+                onClick={() => handleAction('dismiss')}
                 disabled={acting !== null}
-                className='inline-flex items-center justify-center rounded-xl bg-[var(--color-primary)] px-6 py-2.5 text-sm font-semibold text-[var(--color-surface)] shadow-md transition-all hover:bg-[var(--color-primary-strong)] hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100'
+                className='inline-flex items-center justify-center rounded-xl bg-[var(--color-surface)] px-5 py-2.5 text-sm font-semibold text-[var(--color-muted)] ring-1 ring-inset ring-[var(--color-border)] transition-all hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-primary)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100'
               >
-                {acting === 'act_now' ? 'Saving…' : 'I will do this'}
+                {acting === 'dismiss' ? 'Saving…' : 'Not now'}
               </button>
             </div>
           </>

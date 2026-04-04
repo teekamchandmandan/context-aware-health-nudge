@@ -80,16 +80,14 @@ Empty and escalated cases should stay explicit instead of relying on `204`:
 ```json
 {
   "state": "no_nudge",
-  "member": { "id": "member_catchup_01", "name": "Diego Rivera" },
-  "nudge": null
+  "member": { "id": "member_catchup_01", "name": "Diego Rivera" }
 }
 ```
 
 ```json
 {
   "state": "escalated",
-  "member": { "id": "member_support_01", "name": "Carol Davis" },
-  "nudge": null
+  "member": { "id": "member_support_01", "name": "Carol Davis" }
 }
 ```
 
