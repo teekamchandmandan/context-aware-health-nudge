@@ -1,24 +1,20 @@
 import { useState } from 'react';
 
-export function useCardFeedback(onSignalSubmitted: () => void) {
+export function useCardFeedback(onSuccess: (message: string) => void) {
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
 
   function clearFeedback() {
-    setSuccess(null);
     setApiError(null);
   }
 
   function handleSuccess(message: string) {
-    setSuccess(message);
-    onSignalSubmitted();
+    onSuccess(message);
   }
 
   return {
     submitting,
     setSubmitting,
-    success,
     apiError,
     setApiError,
     clearFeedback,

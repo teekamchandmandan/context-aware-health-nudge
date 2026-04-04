@@ -5,7 +5,6 @@ export type SignalType =
   | 'meal_logged'
   | 'weight_logged'
   | 'mood_logged'
-  | 'water_logged'
   | 'sleep_logged';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type MoodValue = 'low' | 'neutral' | 'high';

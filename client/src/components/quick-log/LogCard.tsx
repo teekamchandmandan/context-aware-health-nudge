@@ -4,7 +4,6 @@ interface LogCardProps {
   eyebrow: string;
   title: string;
   children: ReactNode;
-  success: string | null;
   apiError: string | null;
   className?: string;
 }
@@ -13,7 +12,6 @@ export default function LogCard({
   eyebrow,
   title,
   children,
-  success,
   apiError,
   className,
 }: LogCardProps) {
@@ -29,14 +27,6 @@ export default function LogCard({
         {title}
       </h3>
 
-      {success && (
-        <p
-          role='status'
-          className='mt-3 rounded-[1rem] bg-[rgba(143,246,208,0.22)] px-4 py-3 text-sm font-medium text-[var(--color-accent)]'
-        >
-          {success}
-        </p>
-      )}
       {apiError && (
         <p
           role='alert'

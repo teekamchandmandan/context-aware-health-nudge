@@ -36,8 +36,9 @@ export default function SleepForm({
     setSubmitting(true);
     try {
       await postSignal(memberId, 'sleep_logged', { sleep_hours: parsed });
-      setHours('');
-      onSuccess('Your sleep has been saved.');
+      onSuccess(
+        `${parsed}h logged — sleep tracking helps us personalise your plan.`,
+      );
     } catch (error) {
       if (error instanceof ApiError && error.status === 422) {
         setFieldError(
@@ -61,20 +62,25 @@ export default function SleepForm({
         >
           Hours slept
         </label>
-        <input
-          id='sleep-input'
-          name='sleep_hours'
-          type='number'
-          step='0.5'
-          min='0'
-          max='24'
-          inputMode='decimal'
-          autoComplete='off'
-          value={hours}
-          onChange={(event) => setHours(event.target.value)}
-          className={INPUT_CLASSES}
-          placeholder='e.g. 7.5'
-        />
+        <div className='flex items-stretch gap-2'>
+          <input
+            id='sleep-input'
+            name='sleep_hours'
+            type='number'
+            step='0.5'
+            min='0'
+            max='24'
+            inputMode='decimal'
+            autoComplete='off'
+            value={hours}
+            onChange={(event) => setHours(event.target.value)}
+            className={`${INPUT_CLASSES} min-w-0 flex-1`}
+            placeholder='e.g. 7.5'
+          />
+          <div className='shrink-0 inline-flex items-center rounded-[1rem] border border-[rgba(190,200,200,0.9)] bg-white px-3 py-3 text-sm font-semibold text-[var(--color-text)] shadow-[inset_0_1px_2px_rgba(25,28,29,0.03)]'>
+            hours
+          </div>
+        </div>
         {fieldError && (
           <p className='mt-2 text-sm text-[var(--color-error)]'>{fieldError}</p>
         )}
