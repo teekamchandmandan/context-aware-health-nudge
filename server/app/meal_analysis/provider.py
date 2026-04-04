@@ -6,15 +6,14 @@ import httpx
 from app.core.config import MEAL_ANALYSIS_TIMEOUT_SECONDS, OPENAI_MODEL
 
 SYSTEM_PROMPT = (
-    "You extract structured meal details from a member's meal description and optional food image. "
-    "Return only JSON with meal_name, meal_type, carbs_g, protein_g, analysis_summary, analysis_confidence, analysis_status, and analysis_source. "
+    "You extract structured meal details from a member's meal photo without any written description. "
+    "Return only JSON with meal_type, carbs_g, protein_g, analysis_summary, analysis_confidence, analysis_status, and analysis_source. "
     "Use short, plain language. If you are uncertain, omit fields instead of inventing them. "
     "This output may be saved directly on the meal log, so keep estimates cautious and clearly marked as approximate."
 )
 
 
-def request_meal_draft_json(
-    description: str,
+def request_meal_analysis_json(
     api_key: str,
     *,
     photo_bytes: bytes | None,
@@ -29,7 +28,6 @@ def request_meal_draft_json(
             {
                 "role": "user",
                 "content": build_user_content(
-                    description,
                     photo_bytes=photo_bytes,
                     photo_content_type=photo_content_type,
                 ),
@@ -53,19 +51,23 @@ def request_meal_draft_json(
 
 
 def build_user_content(
-    description: str,
     *,
     photo_bytes: bytes | None,
     photo_content_type: str | None,
 ) -> list[dict[str, object]]:
+    if photo_bytes is None or not photo_content_type or not photo_content_type.startswith("image/"):
+        raise ValueError("meal analysis requires an image")
+
     content: list[dict[str, object]] = [
         {
             "type": "text",
             "text": json.dumps(
                 {
-                    "description": description,
+                    "input": "meal_photo_only",
                     "instructions": [
-                        "Infer meal_name, meal_type, carbs_g, and protein_g only when reasonably supported.",
+                        "Use only details visible in the image.",
+                        "Do not rely on any member-written description because none is provided.",
+                        "Infer meal_type, carbs_g, and protein_g only when reasonably supported.",
                         "Use analysis_status='estimated' when you include nutrition estimates.",
                         "Use analysis_status='partial' when you are unsure or only have limited structure.",
                         "Set analysis_source='llm'.",
@@ -75,14 +77,13 @@ def build_user_content(
             ),
         }
     ]
-    if photo_bytes is not None and photo_content_type and photo_content_type.startswith("image/"):
-        encoded = base64.b64encode(photo_bytes).decode("ascii")
-        content.append(
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:{photo_content_type};base64,{encoded}"},
-            }
-        )
+    encoded = base64.b64encode(photo_bytes).decode("ascii")
+    content.append(
+        {
+            "type": "image_url",
+            "image_url": {"url": f"data:{photo_content_type};base64,{encoded}"},
+        }
+    )
     return content
 
 

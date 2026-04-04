@@ -8,6 +8,7 @@ import {
   KG_TO_LB,
   parsePositiveNumber,
   PRIMARY_BUTTON_CLASSES,
+  SELECT_CLASSES,
 } from './shared';
 
 export default function WeightForm({
@@ -40,8 +41,7 @@ export default function WeightForm({
     setSubmitting(true);
     try {
       await postSignal(memberId, 'weight_logged', { weight_lb: weightLb });
-      setWeight('');
-      onSuccess('Your weight has been saved.');
+      onSuccess(`${parsed} ${unit} logged — nice work staying on track!`);
     } catch (error) {
       if (error instanceof ApiError && error.status === 422) {
         setFieldError(getValidationMessage(error) ?? 'Enter a valid weight.');
@@ -63,34 +63,33 @@ export default function WeightForm({
         >
           Weight
         </label>
-        <input
-          id='weight-input'
-          name='weight'
-          type='number'
-          step='0.1'
-          min='0'
-          inputMode='decimal'
-          autoComplete='off'
-          value={weight}
-          onChange={(event) => setWeight(event.target.value)}
-          className={INPUT_CLASSES}
-          placeholder={unit === 'lb' ? 'e.g. 165' : 'e.g. 75'}
-        />
-        <div className='mt-2 flex gap-2'>
-          {(['lb', 'kg'] as const).map((nextUnit) => (
-            <button
-              key={nextUnit}
-              type='button'
-              onClick={() => setUnit(nextUnit)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                unit === nextUnit
-                  ? 'bg-[var(--color-primary)] text-white'
-                  : 'bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-primary)]'
-              }`}
-            >
-              {nextUnit}
-            </button>
-          ))}
+        <div className='flex items-stretch gap-2'>
+          <input
+            id='weight-input'
+            name='weight'
+            type='number'
+            step='0.1'
+            min='0'
+            inputMode='decimal'
+            autoComplete='off'
+            value={weight}
+            onChange={(event) => setWeight(event.target.value)}
+            className={`${INPUT_CLASSES} min-w-0 flex-1`}
+            placeholder={unit === 'lb' ? 'e.g. 165' : 'e.g. 75'}
+          />
+          <label className='sr-only' htmlFor='weight-unit'>
+            Weight unit
+          </label>
+          <select
+            id='weight-unit'
+            name='weight_unit'
+            value={unit}
+            onChange={(event) => setUnit(event.target.value as WeightUnit)}
+            className={SELECT_CLASSES}
+          >
+            <option value='lb'>lb</option>
+            <option value='kg'>kg</option>
+          </select>
         </div>
         {fieldError && (
           <p className='mt-2 text-sm text-[var(--color-error)]'>{fieldError}</p>

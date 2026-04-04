@@ -9,4 +9,3 @@ class MemberNudgeResponse(BaseModel):
     state: NudgeState
     member: MemberRef
     nudge: NudgeDetail | None = None
-    escalation_created: bool | None = None

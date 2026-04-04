@@ -18,7 +18,10 @@ def get_template_phrasing(nudge_type: str) -> dict[str, str]:
     return TEMPLATE_PHRASING[nudge_type].copy()
 
 
+CONFIDENT_TONE_THRESHOLD = 0.75
+
+
 def desired_tone_for_confidence(confidence: float) -> str:
-    if confidence >= 0.75:
+    if confidence >= CONFIDENT_TONE_THRESHOLD:
         return "clear, supportive, and practical"
     return "gentle, supportive, and practical"

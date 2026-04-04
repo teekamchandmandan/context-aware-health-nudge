@@ -21,9 +21,9 @@ CREATE TABLE IF NOT EXISTS nudges (
     content                TEXT,
     explanation            TEXT,
     matched_reason         TEXT,
-    confidence             REAL,
-    escalation_recommended INTEGER DEFAULT 0,
-    status                 TEXT NOT NULL,
+    confidence             REAL CHECK(confidence IS NULL OR (confidence >= 0 AND confidence <= 1)),
+    escalation_recommended INTEGER DEFAULT 0 CHECK(escalation_recommended IN (0, 1)),
+    status                 TEXT NOT NULL CHECK(status IN ('active', 'acted', 'dismissed', 'escalated', 'superseded')),
     generated_by           TEXT NOT NULL DEFAULT 'rule_engine',
     phrasing_source        TEXT NOT NULL DEFAULT 'template',
     created_at             TEXT NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS nudges (
 CREATE TABLE IF NOT EXISTS nudge_actions (
     id            TEXT PRIMARY KEY,
     nudge_id      TEXT NOT NULL REFERENCES nudges(id),
-    action_type   TEXT NOT NULL,
+    action_type   TEXT NOT NULL CHECK(action_type IN ('act_now', 'dismiss', 'ask_for_help')),
     metadata_json TEXT,
     created_at    TEXT NOT NULL
 );
@@ -43,8 +43,8 @@ CREATE TABLE IF NOT EXISTS escalations (
     nudge_id    TEXT REFERENCES nudges(id),
     member_id   TEXT NOT NULL REFERENCES members(id),
     reason      TEXT,
-    source      TEXT,
-    status      TEXT NOT NULL DEFAULT 'open',
+    source      TEXT CHECK(source IS NULL OR source IN ('rule_engine', 'member_action')),
+    status      TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'resolved')),
     created_at  TEXT NOT NULL,
     resolved_at TEXT
 );
@@ -57,3 +57,10 @@ CREATE TABLE IF NOT EXISTS audit_events (
     payload_json TEXT,
     created_at   TEXT NOT NULL
 );
+
+-- Performance indexes for frequent query patterns
+CREATE INDEX IF NOT EXISTS idx_signals_member_type ON signals(member_id, signal_type, created_at);
+CREATE INDEX IF NOT EXISTS idx_nudges_member_status ON nudges(member_id, status, created_at);
+CREATE INDEX IF NOT EXISTS idx_nudge_actions_nudge ON nudge_actions(nudge_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_escalations_member_status ON escalations(member_id, status, created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_events_type ON audit_events(event_type, created_at);

@@ -59,13 +59,13 @@ Successful responses should always include a `state` field.
 ```json
 {
   "state": "active",
-  "member": { "id": "member_meal_01", "name": "Maya" },
+  "member": { "id": "member_meal_01", "name": "Alice Chen" },
   "nudge": {
     "id": "nudge_123",
     "nudge_type": "meal_guidance",
-    "content": "Try a lighter, lower-carb dinner to balance today's lunch.",
+    "content": "Try a lighter, lower-carb dinner to balance today's earlier meal.",
     "explanation": "You logged a higher-carb meal today and your goal is low carb.",
-    "matched_reason": "recent_meal_high_carb_for_low_carb_goal",
+    "matched_reason": "meal_goal_mismatch",
     "confidence": 0.86,
     "escalation_recommended": false,
     "status": "active",
@@ -80,17 +80,14 @@ Empty and escalated cases should stay explicit instead of relying on `204`:
 ```json
 {
   "state": "no_nudge",
-  "member": { "id": "member_weight_01", "name": "Ava" },
-  "nudge": null
+  "member": { "id": "member_catchup_01", "name": "Diego Rivera" }
 }
 ```
 
 ```json
 {
   "state": "escalated",
-  "member": { "id": "member_support_01", "name": "Jordan" },
-  "nudge": null,
-  "escalation_created": true
+  "member": { "id": "member_support_01", "name": "Carol Davis" }
 }
 ```
 
@@ -101,7 +98,6 @@ Empty and escalated cases should stay explicit instead of relying on `204`:
   "nudge_id": "nudge_123",
   "action_type": "dismiss",
   "nudge_status": "dismissed",
-  "escalation_created": false,
   "recorded_at": "2026-04-02T18:35:00Z"
 }
 ```
@@ -118,17 +114,11 @@ Empty and escalated cases should stay explicit instead of relying on `204`:
 
 ## Signal Intake Contract
 
-- Allowed `signal_type` values are `meal_logged`, `weight_logged`, and `mood_logged`.
-- `meal_logged` accepts two distinct payload shapes:
-  - **Description-first (new):** requires `meal_input_method` and at least one of `description`, `meal_name`, or `meal_type`. Used by the one-step `POST /api/members/{member_id}/meal-logs` endpoint.
-  - **Legacy structured:** requires `meal_type` plus at least one of `carbs_g` or `meal_tag`. `meal_input_method` is not required in this shape.
+- Allowed `signal_type` values are `weight_logged`, `mood_logged`, and `sleep_logged`.
 - Minimum payload fields for other signal types:
   - `weight_logged`: `weight_lb`
-  - `mood_logged`: `mood`
-- Optional payload fields:
-  - `meal_logged`: `meal_type`, `meal_name`, `description`, `carbs_g`, `protein_g`, `photo_attached`, `analysis_summary`, `analysis_confidence`, `analysis_status`, `analysis_source`
-  - `meal_logged` legacy compatibility: `analysis_confirmed`, `meal_tag`
-  - `mood_logged`: `note`
+  - `mood_logged`: `mood` with values `low`, `neutral`, or `high`
+  - `sleep_logged`: `sleep_hours`
 - Reject unknown signal types or missing required payload fields with `422`.
 
 ## One-Step Meal Contract
@@ -137,12 +127,13 @@ Use a dedicated one-step meal logging endpoint for the member meal flow so photo
 
 ### `POST /api/members/{member_id}/meal-logs`
 
-- Accept a multipart form payload with optional `meal_name`, optional `description`, and optional `photo` file.
-- Require at least one of `description` or `photo`.
+- Accept a multipart form payload with required `photo` only.
+- Require a meal photo for every one-step meal log.
+- Reject unexpected multipart form fields such as `description` with `422`.
 - Run backend meal analysis synchronously, persist the final `meal_logged` signal, and return the stored signal payload.
-- The saved payload may include inferred `meal_name`, `meal_type`, `carbs_g`, `protein_g`, a short `analysis_summary`, and an `analysis_source` of `llm` or `fallback`.
+- The saved payload may include inferred `meal_type`, `carbs_g`, `protein_g`, a short `analysis_summary`, and an `analysis_source` of `llm` or `fallback`.
 - Meal photos are transient analysis inputs only in this assignment build. Add a production note that a real product may persist uploaded photos for later member review.
-- If provider analysis fails, still save the meal with the raw member input and any deterministic fallback guesses instead of blocking the member flow.
+- If provider analysis fails, still save the meal with the uploaded photo and any deterministic fallback output instead of blocking the member flow.
 
 ## API Responsibilities
 
@@ -174,8 +165,7 @@ Use a dedicated one-step meal logging endpoint for the member meal flow so photo
 ### `POST /api/members/{member_id}/signals`
 
 - Accept live member-entered signal payloads from the member experience.
-- For meal logs submitted through the dedicated meal endpoint, persist the member's raw input plus any structured values extracted by the backend in the same request.
-- Keep `/signals` available for the other structured signal types and any legacy meal payloads that still rely on explicit structured fields.
+- Keep `/signals` available for structured weight, mood, and sleep inputs only.
 - Persist the signal and return the stored record.
 - Let the client refetch `GET /api/members/{member_id}/nudge` after signal submission so the decisioning state stays explicit.
 

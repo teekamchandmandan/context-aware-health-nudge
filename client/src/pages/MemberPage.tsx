@@ -65,9 +65,19 @@ export default function MemberPage() {
     setError(null);
   }
 
-  function refetchNudge() {
+  const refetchNudge = useCallback(() => {
     loadNudge(memberId);
-  }
+  }, [memberId, loadNudge]);
+
+  /* Silent refresh: update data without flashing the loading spinner. */
+  const silentRefetch = useCallback(async () => {
+    try {
+      const res = await fetchNudge(memberId);
+      setData(res);
+    } catch {
+      /* swallow — nudge section keeps its previous state */
+    }
+  }, [memberId]);
 
   const state: NudgeState = data?.state ?? 'active';
   const currentMember =
@@ -167,13 +177,16 @@ export default function MemberPage() {
         </section>
 
         <section>
-          <h2 className='mb-4 font-headline text-xl font-bold tracking-[-0.04em] text-[var(--color-primary)]'>
-            Check in
+          <h2 className='mb-1 font-headline text-xl font-bold tracking-[-0.04em] text-[var(--color-primary)]'>
+            Quick check-ins
           </h2>
+          <p className='mb-4 text-sm text-[var(--color-muted)]'>
+            Log a few things to keep your guidance accurate.
+          </p>
           <QuickLog
             key={memberId}
             memberId={memberId}
-            onSignalSubmitted={refetchNudge}
+            onSignalSubmitted={silentRefetch}
           />
         </section>
       </main>

@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 
 from app.database import _connect
 from app.main import app
+from app.meal_analysis import create_meal_draft
 from app.models.meals import MealDraftResponse
 from app.seed import reset_and_seed
 
@@ -179,6 +180,18 @@ def test_member_nudge_weight():
     ok("content is populated", data["nudge"]["content"] is not None)
 
 
+def test_member_nudge_no_nudge():
+    section("GET /nudge — member_catchup_01 returns no_nudge")
+    seed()
+    r = client.get("/api/members/member_catchup_01/nudge")
+    ok("status 200", r.status_code == 200)
+    data = r.json()
+    ok("state is 'no_nudge'", data["state"] == "no_nudge", f"got {data['state']}")
+    ok("member.id matches", data["member"]["id"] == "member_catchup_01")
+    ok("member.name is Diego Rivera", data["member"]["name"] == "Diego Rivera")
+    ok("nudge is null", data.get("nudge") is None)
+
+
 def test_member_nudge_escalated():
     section("GET /nudge — member_support_01 returns escalated")
     seed()
@@ -187,7 +200,6 @@ def test_member_nudge_escalated():
     data = r.json()
     ok("state is 'escalated'", data["state"] == "escalated", f"got {data['state']}")
     ok("nudge is null", data.get("nudge") is None)
-    ok("escalation_created is true", data.get("escalation_created") is True)
 
 
 def test_member_nudge_404():
@@ -212,7 +224,6 @@ def test_action_act_now():
     ok("nudge_id matches", data["nudge_id"] == nudge_id)
     ok("action_type is act_now", data["action_type"] == "act_now")
     ok("nudge_status is acted", data["nudge_status"] == "acted")
-    ok("escalation_created is false", data["escalation_created"] is False)
     ok("recorded_at present", "recorded_at" in data)
 
     audit_payload = latest_audit_payload("user_action", entity_id=nudge_id)
@@ -250,7 +261,6 @@ def test_action_ask_for_help():
     ok("status 200", r.status_code == 200)
     data = r.json()
     ok("nudge_status is escalated", data["nudge_status"] == "escalated")
-    ok("escalation_created is true", data["escalation_created"] is True)
 
     # Verify escalation visible to coach
     er = client.get("/api/coach/escalations")
@@ -302,66 +312,76 @@ def test_action_422_invalid_type():
     ok("status 422", r.status_code == 422, f"got {r.status_code}")
 
 
-# ── POST /api/members/{member_id}/signals ────────────────────────────────────
-
-def test_signal_meal_logged():
-    section("POST /signals — meal_logged")
-    seed()
-    r = client.post("/api/members/member_meal_01/signals", json={
-        "signal_type": "meal_logged",
-        "payload": {"meal_type": "dinner", "carbs_g": 45, "protein_g": 22}
-    })
-    ok("status 200", r.status_code == 200, f"got {r.status_code}")
-    data = r.json()
-    ok("id present", "id" in data)
-    ok("signal_type is meal_logged", data["signal_type"] == "meal_logged")
-    ok("payload has meal_type", data["payload"]["meal_type"] == "dinner")
-    ok("created_at present", "created_at" in data)
-
-
-def test_signal_meal_logged_description_first():
-    section("POST /signals — description-first meal_logged")
-    seed()
-    r = client.post("/api/members/member_meal_01/signals", json={
-        "signal_type": "meal_logged",
-        "payload": {
-            "meal_input_method": "description",
-            "description": "Turkey sandwich and an apple",
-            "meal_name": "Turkey sandwich lunch",
-            "meal_type": "lunch",
-            "carbs_g": 42,
-            "protein_g": 24,
-            "photo_attached": False,
-            "analysis_summary": "Estimated from your description. Saved values may be approximate.",
-            "analysis_confidence": 0.58,
-            "analysis_status": "estimated",
-            "analysis_source": "fallback",
-            "analysis_confirmed": True,
-        }
-    })
-    ok("status 200", r.status_code == 200, f"got {r.status_code}")
-    data = r.json()
-    ok("signal_type is meal_logged", data["signal_type"] == "meal_logged")
-    ok("payload stores description", data["payload"]["description"] == "Turkey sandwich and an apple")
-    ok("payload stores analysis_confirmed", data["payload"]["analysis_confirmed"] is True)
-    ok("payload stores meal_name", data["payload"]["meal_name"] == "Turkey sandwich lunch")
-
-
-def test_meal_log_one_step_description_only():
-    section("POST /meal-logs — one-step description-first save")
+def test_meal_analysis_photo_only_fallback():
+    section("Meal analysis — fallback supports photo-only input")
     seed()
 
-    r = client.post(
-        "/api/members/member_meal_01/meal-logs",
-        data={"meal_name": "Pasta dinner", "description": "Pasta carbonara with garlic bread"},
+    analysis = create_meal_draft(
+        photo_bytes=b"fake-image-bytes",
+        photo_content_type="image/jpeg",
     )
-    ok("status 200", r.status_code == 200, f"got {r.status_code}")
-    data = r.json()
-    ok("signal_type is meal_logged", data["signal_type"] == "meal_logged")
-    ok("input method is one_step", data["payload"]["meal_input_method"] == "one_step")
-    ok("description saved", data["payload"]["description"] == "Pasta carbonara with garlic bread")
-    ok("meal name saved", data["payload"]["meal_name"] == "Pasta dinner")
-    ok("carbs inferred", data["payload"]["carbs_g"] == 72.0, f"got {data['payload'].get('carbs_g')!r}")
+
+    ok("fallback source recorded", analysis.analysis_source == "fallback", f"got {analysis.analysis_source!r}")
+    ok("fallback status is partial", analysis.analysis_status == "partial", f"got {analysis.analysis_status!r}")
+    ok(
+        "fallback summary mentions meal photo",
+        "meal photo" in (analysis.analysis_summary or "").lower(),
+        f"got {analysis.analysis_summary!r}",
+    )
+    ok("fallback omits meal type", analysis.meal_type is None, f"got {analysis.meal_type!r}")
+
+
+def test_meal_analysis_provider_uses_photo_only_payload():
+    section("Meal analysis — provider call is photo only")
+    seed()
+
+    with patch("app.meal_analysis.get_openai_api_key", return_value="test-key"), patch(
+        "app.meal_analysis._request_meal_analysis_json",
+        return_value=(
+            '{"meal_type":"dinner","carbs_g":45,"protein_g":24,'
+            '"analysis_summary":"Estimated from the uploaded meal photo. Saved values may be approximate.",' 
+            '"analysis_confidence":0.82,"analysis_status":"estimated"}'
+        ),
+    ) as mocked_request:
+        analysis = create_meal_draft(
+            photo_bytes=b"fake-image-bytes",
+            photo_content_type="image/jpeg",
+        )
+
+    ok("provider result source is llm", analysis.analysis_source == "llm", f"got {analysis.analysis_source!r}")
+    ok("provider result meal type saved", analysis.meal_type == "dinner", f"got {analysis.meal_type!r}")
+    ok(
+        "provider called with photo only",
+        mocked_request.call_args == (("test-key",), {"photo_bytes": b"fake-image-bytes", "photo_content_type": "image/jpeg"}),
+        f"got {mocked_request.call_args!r}",
+    )
+
+
+def test_meal_log_one_step_rejects_description_field():
+    section("POST /meal-logs — rejects extra description field")
+    seed()
+
+    with patch(
+        "app.main.create_meal_draft",
+        return_value=MealDraftResponse(
+            meal_type="dinner",
+            carbs_g=72,
+            protein_g=24,
+            analysis_summary="Estimated from the uploaded meal photo. Saved values may be approximate.",
+            analysis_confidence=0.79,
+            analysis_status="estimated",
+            analysis_source="llm",
+        ),
+    ) as mocked_create_meal_draft:
+        r = client.post(
+            "/api/members/member_meal_01/meal-logs",
+            data={"description": "Pasta carbonara with garlic bread"},
+            files={"photo": ("meal.jpg", b"fake-image-bytes", "image/jpeg")},
+        )
+
+    ok("status 422", r.status_code == 422, f"got {r.status_code}")
+    ok("validation mentions unexpected fields", "unexpected meal upload fields" in json.dumps(r.json()), f"got {r.text}")
+    ok("analysis not called", mocked_create_meal_draft.call_count == 0, f"got {mocked_create_meal_draft.call_count}")
 
 
 def test_meal_log_one_step_photo_only():
@@ -371,12 +391,9 @@ def test_meal_log_one_step_photo_only():
     with patch(
         "app.main.create_meal_draft",
         return_value=MealDraftResponse(
-            description="Meal photo upload",
-            meal_name="Chicken salad",
             meal_type="lunch",
             carbs_g=16,
             protein_g=28,
-            photo_attached=True,
             analysis_summary="Estimated from the uploaded meal photo. Saved values may be approximate.",
             analysis_confidence=0.74,
             analysis_status="estimated",
@@ -391,23 +408,20 @@ def test_meal_log_one_step_photo_only():
     ok("status 200", r.status_code == 200, f"got {r.status_code}")
     data = r.json()
     ok("photo attached saved", data["payload"]["photo_attached"] is True)
-    ok("input method is one_step_with_photo", data["payload"]["meal_input_method"] == "one_step_with_photo")
-    ok("analysis meal name saved", data["payload"]["meal_name"] == "Chicken salad")
+    ok("meal_input_method not persisted", "meal_input_method" not in data["payload"], f"got {data['payload']!r}")
+    ok("analysis meal type saved", data["payload"]["meal_type"] == "lunch")
     ok("analysis carbs saved", data["payload"]["carbs_g"] == 16)
 
 
-def test_meal_log_requires_description_or_photo():
-    section("POST /meal-logs — requires description or photo")
+def test_meal_log_requires_photo():
+    section("POST /meal-logs — requires a meal photo")
     seed()
 
-    r = client.post(
-        "/api/members/member_meal_01/meal-logs",
-        data={"meal_name": "Optional name only"},
-    )
+    r = client.post("/api/members/member_meal_01/meal-logs")
     ok("status 422", r.status_code == 422, f"got {r.status_code}")
     ok(
-        "validation mentions description or photo",
-        "description or photo" in json.dumps(r.json()),
+        "validation mentions meal photo",
+        "meal photo" in json.dumps(r.json()),
         f"got {r.text}",
     )
 
@@ -458,23 +472,38 @@ def test_signal_mood_logged():
     seed()
     r = client.post("/api/members/member_support_01/signals", json={
         "signal_type": "mood_logged",
-        "payload": {"mood": "good", "note": "Feeling better today"}
+        "payload": {"mood": "high"}
     })
     ok("status 200", r.status_code == 200)
-    ok("mood in payload", r.json()["payload"]["mood"] == "good")
+    ok("mood in payload", r.json()["payload"]["mood"] == "high")
 
 
-def test_signal_water_logged():
-    section("POST /signals — water_logged")
+def test_signal_422_invalid_values():
+    section("POST /signals — 422 for invalid payload values")
     seed()
-    r = client.post("/api/members/member_meal_01/signals", json={
-        "signal_type": "water_logged",
-        "payload": {"water_ml": 500}
+
+    mood = client.post("/api/members/member_support_01/signals", json={
+        "signal_type": "mood_logged",
+        "payload": {"mood": "good"}
     })
-    ok("status 200", r.status_code == 200, f"got {r.status_code}")
-    data = r.json()
-    ok("signal_type is water_logged", data["signal_type"] == "water_logged")
-    ok("water_ml in payload", data["payload"]["water_ml"] == 500)
+    ok("422 for invalid mood value", mood.status_code == 422, f"got {mood.status_code}")
+    ok(
+        "mood error mentions allowed values",
+        "low, neutral, high" in json.dumps(mood.json()),
+        f"got {mood.text}",
+    )
+
+    weight = client.post("/api/members/member_weight_01/signals", json={
+        "signal_type": "weight_logged",
+        "payload": {"weight_lb": 0}
+    })
+    ok("422 for non-positive weight", weight.status_code == 422, f"got {weight.status_code}")
+
+    sleep = client.post("/api/members/member_meal_01/signals", json={
+        "signal_type": "sleep_logged",
+        "payload": {"sleep_hours": 25}
+    })
+    ok("422 for sleep above 24h", sleep.status_code == 422, f"got {sleep.status_code}")
 
 
 def test_signal_sleep_logged():
@@ -493,20 +522,6 @@ def test_signal_sleep_logged():
 def test_signal_422_missing_required():
     section("POST /signals — 422 for missing required fields")
     seed()
-    # meal_logged without meal_type
-    r = client.post("/api/members/member_meal_01/signals", json={
-        "signal_type": "meal_logged",
-        "payload": {"carbs_g": 30}
-    })
-    ok("422 without meal_type", r.status_code == 422, f"got {r.status_code}")
-
-    # meal_logged with meal_type but no carbs_g or meal_tag
-    r2 = client.post("/api/members/member_meal_01/signals", json={
-        "signal_type": "meal_logged",
-        "payload": {"meal_type": "lunch"}
-    })
-    ok("422 without carbs_g or meal_tag", r2.status_code == 422, f"got {r2.status_code}")
-
     # weight_logged without weight_lb
     r3 = client.post("/api/members/member_weight_01/signals", json={
         "signal_type": "weight_logged",
@@ -521,19 +536,12 @@ def test_signal_422_missing_required():
     })
     ok("422 without mood", r4.status_code == 422, f"got {r4.status_code}")
 
-    # water_logged without water_ml
-    r5 = client.post("/api/members/member_meal_01/signals", json={
-        "signal_type": "water_logged",
-        "payload": {}
-    })
-    ok("422 without water_ml", r5.status_code == 422, f"got {r5.status_code}")
-
     # sleep_logged without sleep_hours
-    r6 = client.post("/api/members/member_meal_01/signals", json={
+    r5 = client.post("/api/members/member_meal_01/signals", json={
         "signal_type": "sleep_logged",
         "payload": {}
     })
-    ok("422 without sleep_hours", r6.status_code == 422, f"got {r6.status_code}")
+    ok("422 without sleep_hours", r5.status_code == 422, f"got {r5.status_code}")
 
 
 def test_signal_422_unknown_type():
@@ -650,6 +658,7 @@ if __name__ == "__main__":
         test_member_nudge_llm_timeout_fallback,
         test_member_nudge_llm_idempotent_reads,
         test_member_nudge_weight,
+        test_member_nudge_no_nudge,
         test_member_nudge_escalated,
         test_member_nudge_404,
         test_action_act_now,
@@ -658,16 +667,16 @@ if __name__ == "__main__":
         test_action_409_terminal,
         test_action_404_unknown,
         test_action_422_invalid_type,
-        test_signal_meal_logged,
-        test_signal_meal_logged_description_first,
-        test_meal_log_one_step_description_only,
+        test_meal_analysis_photo_only_fallback,
+        test_meal_analysis_provider_uses_photo_only_payload,
+        test_meal_log_one_step_rejects_description_field,
         test_meal_log_one_step_photo_only,
-        test_meal_log_requires_description_or_photo,
+        test_meal_log_requires_photo,
         test_meal_log_rejects_non_image_upload,
         test_signal_weight_logged,
         test_signal_re_evaluates_existing_active_nudge,
         test_signal_mood_logged,
-        test_signal_water_logged,
+        test_signal_422_invalid_values,
         test_signal_sleep_logged,
         test_signal_422_missing_required,
         test_signal_422_unknown_type,

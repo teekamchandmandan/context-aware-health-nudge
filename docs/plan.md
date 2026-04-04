@@ -53,7 +53,7 @@ If a member has not logged weight for several days, the system sends a gentle re
 
 ### Scenario 3: Support risk
 
-If signals indicate low mood combined with repeated dismissals, or if the member explicitly asks for help, the system escalates the case to a coach. Mood input may come from a simple slider with an optional note, but the escalation decision should remain rule-based. This is the path where the product should defer to a human rather than continue automated nudging.
+If signals indicate low mood combined with repeated dismissals, or if the member explicitly asks for help, the system escalates the case to a coach. Mood input should stay simple and structured, and the escalation decision should remain rule-based. This is the path where the product should defer to a human rather than continue automated nudging.
 
 ## 5. Architecture and Stack
 
@@ -154,7 +154,7 @@ The schema will use six focused tables:
 
 Enumerated values:
 
-- `signal_type`: `meal_logged`, `weight_logged`, `mood_logged`
+- `signal_type`: `weight_logged`, `mood_logged`, `sleep_logged`
 - `nudge_type`: `meal_guidance`, `weight_check_in`, `support_risk`
 - `nudge.status`: `active`, `acted`, `dismissed`, `escalated`
 - `nudge_actions.action_type`: `act_now`, `dismiss`, `ask_for_help`
@@ -193,9 +193,9 @@ Default API behavior:
 - Show one active nudge card at a time.
 - Include a short explanation such as "Why am I seeing this?" so the recommendation feels grounded in member context.
 - Offer exactly three actions: Act now, Dismiss, and Ask for help.
-- Meal logging should support an optional meal name, free-text details, and optional photo capture with inline preview, while the backend extracts structured nutrition fields and saves the meal in one step.
-- The page must remain usable without photo capture, and detailed meal nudges may use backend-extracted meal fields immediately in this assignment flow.
-- Meal photos may stay transient for this assignment build, but a production product would likely persist uploaded photos so members can review past uploads.
+- Meal logging should require photo capture or upload with inline preview, while the backend extracts structured nutrition fields from the image and saves the meal in one step.
+- The page should guide members through this photo-based meal logging flow, and detailed meal nudges may use backend-extracted meal fields immediately in this assignment flow.
+- Meal photos may stay transient for this assignment build even though they are required for meal logging, but a production product would likely persist uploaded photos so members can review past uploads.
 
 ### Coach experience
 

@@ -2,11 +2,10 @@ from typing import Annotated
 from functools import partial
 
 import anyio
-from fastapi import APIRouter, File, Form, Path, UploadFile
+from fastapi import APIRouter, File, Path, Request, UploadFile
 
 from app.api.deps import DbDep, get_member_or_404
 from app.engine import evaluate_member
-from app.models.meals import MealDraftResponse
 from app.models.member import MemberNudgeResponse
 from app.models.shared import MemberRef, NudgeDetail, NudgeState
 from app.models.signals import SignalRequest, SignalResponse
@@ -14,6 +13,7 @@ from app.services.meal_logging import (
     build_meal_log_payload,
     create_meal_draft_response,
     read_meal_photo,
+    validate_meal_upload_form,
     validate_meal_log_input,
 )
 from app.services.signals import persist_signal
@@ -46,7 +46,6 @@ def _build_member_nudge_response(member: MemberRef, result: dict) -> MemberNudge
             state=NudgeState.escalated,
             member=member,
             nudge=None,
-            escalation_created=True,
         )
 
     return MemberNudgeResponse(
@@ -75,48 +74,24 @@ def get_member_nudge(
     return _build_member_nudge_response(member, result)
 
 
-@router.post("/{member_id}/meal-drafts", response_model_exclude_none=True)
-async def post_meal_draft(
-    member_id: Annotated[str, Path()],
-    description: Annotated[str, Form(min_length=2, max_length=500)],
-    conn: DbDep,
-    photo: Annotated[UploadFile | None, File()] = None,
-) -> MealDraftResponse:
-    get_member_or_404(conn, member_id)
-
-    photo_bytes, photo_content_type = await read_meal_photo(photo, require_image=False)
-    return await anyio.to_thread.run_sync(
-        partial(
-            create_meal_draft_response,
-            description,
-            photo_bytes=photo_bytes,
-            photo_content_type=photo_content_type,
-        )
-    )
-
-
 @router.post("/{member_id}/meal-logs", response_model_exclude_none=True)
 async def post_member_meal_log(
     member_id: Annotated[str, Path()],
     conn: DbDep,
-    meal_name: Annotated[str | None, Form(max_length=120)] = None,
-    description: Annotated[str | None, Form(max_length=500)] = None,
+    request: Request,
     photo: Annotated[UploadFile | None, File()] = None,
 ) -> SignalResponse:
     get_member_or_404(conn, member_id)
+    await validate_meal_upload_form(request)
 
     meal_input = validate_meal_log_input(
-        meal_name=meal_name,
-        description=description,
         photo_attached=photo is not None,
     )
     photo_bytes, photo_content_type = await read_meal_photo(photo, require_image=True)
 
-    analysis_input = meal_input.description or meal_input.meal_name or "Meal photo upload"
     meal_analysis = await anyio.to_thread.run_sync(
         partial(
             create_meal_draft_response,
-            analysis_input,
             photo_bytes=photo_bytes,
             photo_content_type=photo_content_type,
         )
