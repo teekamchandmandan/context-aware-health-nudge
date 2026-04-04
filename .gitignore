@@ -27,3 +27,8 @@ dist/
 .env.local
 server/.env
 client/.env.local
+
+# Temp
+.tmp/
+.vite/
+
