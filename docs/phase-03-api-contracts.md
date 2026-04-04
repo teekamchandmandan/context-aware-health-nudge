@@ -119,14 +119,30 @@ Empty and escalated cases should stay explicit instead of relying on `204`:
 ## Signal Intake Contract
 
 - Allowed `signal_type` values are `meal_logged`, `weight_logged`, and `mood_logged`.
-- Minimum payload fields:
-  - `meal_logged`: `meal_type` and at least one of `carbs_g` or `meal_tag`
+- `meal_logged` accepts two distinct payload shapes:
+  - **Description-first (new):** requires `meal_input_method` and at least one of `description`, `meal_name`, or `meal_type`. Used by the one-step `POST /api/members/{member_id}/meal-logs` endpoint.
+  - **Legacy structured:** requires `meal_type` plus at least one of `carbs_g` or `meal_tag`. `meal_input_method` is not required in this shape.
+- Minimum payload fields for other signal types:
   - `weight_logged`: `weight_lb`
   - `mood_logged`: `mood`
 - Optional payload fields:
-  - `meal_logged`: `protein_g`, `photo_attached`
+  - `meal_logged`: `meal_type`, `meal_name`, `description`, `carbs_g`, `protein_g`, `photo_attached`, `analysis_summary`, `analysis_confidence`, `analysis_status`, `analysis_source`
+  - `meal_logged` legacy compatibility: `analysis_confirmed`, `meal_tag`
   - `mood_logged`: `note`
 - Reject unknown signal types or missing required payload fields with `422`.
+
+## One-Step Meal Contract
+
+Use a dedicated one-step meal logging endpoint for the member meal flow so photo upload and extraction remain atomic.
+
+### `POST /api/members/{member_id}/meal-logs`
+
+- Accept a multipart form payload with optional `meal_name`, optional `description`, and optional `photo` file.
+- Require at least one of `description` or `photo`.
+- Run backend meal analysis synchronously, persist the final `meal_logged` signal, and return the stored signal payload.
+- The saved payload may include inferred `meal_name`, `meal_type`, `carbs_g`, `protein_g`, a short `analysis_summary`, and an `analysis_source` of `llm` or `fallback`.
+- Meal photos are transient analysis inputs only in this assignment build. Add a production note that a real product may persist uploaded photos for later member review.
+- If provider analysis fails, still save the meal with the raw member input and any deterministic fallback guesses instead of blocking the member flow.
 
 ## API Responsibilities
 
@@ -158,7 +174,8 @@ Empty and escalated cases should stay explicit instead of relying on `204`:
 ### `POST /api/members/{member_id}/signals`
 
 - Accept live member-entered signal payloads from the member experience.
-- For meal logs, prefer deterministic structured fields first and treat photo capture as optional prototype metadata.
+- For meal logs submitted through the dedicated meal endpoint, persist the member's raw input plus any structured values extracted by the backend in the same request.
+- Keep `/signals` available for the other structured signal types and any legacy meal payloads that still rely on explicit structured fields.
 - Persist the signal and return the stored record.
 - Let the client refetch `GET /api/members/{member_id}/nudge` after signal submission so the decisioning state stays explicit.
 
@@ -167,7 +184,7 @@ Empty and escalated cases should stay explicit instead of relying on `204`:
 - Make active nudge retrieval idempotent from the API boundary, not just inside the engine.
 - Keep action handling strict so invalid transitions fail clearly.
 - Preserve enough response detail that frontend branches do not need extra endpoints.
-- Keep signal intake simple; for the prototype, meal photo handling can stay as lightweight metadata in `payload_json` rather than requiring a separate media service.
+- Keep signal intake simple; for the prototype, meal photo handling can stay ephemeral inside the one-step meal logging request and the final saved signal can record only `photo_attached` plus the extracted summary fields.
 - Add simple filtering or ordering only if it does not complicate the API surface materially.
 - Repeated `GET /nudge` calls should return the same active nudge until it reaches a terminal state.
 

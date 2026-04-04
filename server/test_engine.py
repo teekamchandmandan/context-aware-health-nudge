@@ -354,6 +354,105 @@ def test_evaluator_units():
     conn.close()
 
 
+def test_description_first_meal_requires_confirmation():
+    section("Description-first meal guidance requires confirmed details")
+    conn = fresh_db()
+
+    conn.execute("UPDATE members SET goal_type = 'low_carb' WHERE id = 'member_weight_01'")
+    conn.execute(
+        "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+        (
+            _id(),
+            "member_weight_01",
+            "meal_logged",
+            json.dumps(
+                {
+                    "meal_input_method": "description",
+                    "description": "Big bowl of pasta",
+                    "meal_name": "Pasta bowl",
+                    "carbs_g": 82,
+                    "analysis_source": "fallback",
+                    "analysis_confirmed": False,
+                }
+            ),
+            _ts(_now()),
+        ),
+    )
+    conn.commit()
+
+    unconfirmed = check_meal_goal_mismatch(conn, "member_weight_01")
+    ok("unconfirmed meal does not trigger guidance", unconfirmed is None)
+
+    conn.execute(
+        "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+        (
+            _id(),
+            "member_weight_01",
+            "meal_logged",
+            json.dumps(
+                {
+                    "meal_input_method": "description",
+                    "description": "Big bowl of pasta",
+                    "meal_name": "Pasta bowl",
+                    "meal_type": "dinner",
+                    "carbs_g": 82,
+                    "protein_g": 18,
+                    "analysis_source": "llm",
+                    "analysis_confirmed": True,
+                }
+            ),
+            _ts(_now()),
+        ),
+    )
+    conn.commit()
+
+    confirmed = check_meal_goal_mismatch(conn, "member_weight_01")
+    ok("confirmed meal triggers guidance", confirmed is not None)
+    ok(
+        "confirmed explanation basis uses meal name",
+        confirmed is not None and "Pasta bowl" in confirmed.explanation_basis,
+        f"got {confirmed.explanation_basis if confirmed else 'None'}",
+    )
+
+    conn.close()
+
+
+def test_one_step_meal_input_is_trusted():
+    section("One-step meal log is trusted for guidance")
+    conn = fresh_db()
+
+    conn.execute("UPDATE members SET goal_type = 'low_carb' WHERE id = 'member_weight_01'")
+    conn.execute(
+        "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+        (
+            _id(),
+            "member_weight_01",
+            "meal_logged",
+            json.dumps(
+                {
+                    "meal_input_method": "one_step_with_photo",
+                    "meal_name": "Pasta bowl",
+                    "photo_attached": True,
+                    "carbs_g": 82,
+                    "analysis_source": "llm",
+                }
+            ),
+            _ts(_now()),
+        ),
+    )
+    conn.commit()
+
+    candidate = check_meal_goal_mismatch(conn, "member_weight_01")
+    ok("one-step meal triggers guidance", candidate is not None)
+    ok(
+        "one-step explanation uses meal name",
+        candidate is not None and "Pasta bowl" in candidate.explanation_basis,
+        f"got {candidate.explanation_basis if candidate else 'None'}",
+    )
+
+    conn.close()
+
+
 def test_llm_success_upgrade():
     section("Phase 6: successful LLM phrasing upgrades active nudge")
     conn = fresh_db()
@@ -575,6 +674,8 @@ def test_phrasing_output_validation():
 
 if __name__ == "__main__":
     test_evaluator_units()
+    test_description_first_meal_requires_confirmation()
+    test_one_step_meal_input_is_trusted()
     test_meal_mismatch()
     test_idempotency()
     test_missing_weight()

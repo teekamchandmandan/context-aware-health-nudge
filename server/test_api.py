@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 
 from app.database import _connect
 from app.main import app
+from app.models.meals import MealDraftResponse
 from app.seed import reset_and_seed
 
 client = TestClient(app)
@@ -318,6 +319,111 @@ def test_signal_meal_logged():
     ok("created_at present", "created_at" in data)
 
 
+def test_signal_meal_logged_description_first():
+    section("POST /signals — description-first meal_logged")
+    seed()
+    r = client.post("/api/members/member_meal_01/signals", json={
+        "signal_type": "meal_logged",
+        "payload": {
+            "meal_input_method": "description",
+            "description": "Turkey sandwich and an apple",
+            "meal_name": "Turkey sandwich lunch",
+            "meal_type": "lunch",
+            "carbs_g": 42,
+            "protein_g": 24,
+            "photo_attached": False,
+            "analysis_summary": "Estimated from your description. Saved values may be approximate.",
+            "analysis_confidence": 0.58,
+            "analysis_status": "estimated",
+            "analysis_source": "fallback",
+            "analysis_confirmed": True,
+        }
+    })
+    ok("status 200", r.status_code == 200, f"got {r.status_code}")
+    data = r.json()
+    ok("signal_type is meal_logged", data["signal_type"] == "meal_logged")
+    ok("payload stores description", data["payload"]["description"] == "Turkey sandwich and an apple")
+    ok("payload stores analysis_confirmed", data["payload"]["analysis_confirmed"] is True)
+    ok("payload stores meal_name", data["payload"]["meal_name"] == "Turkey sandwich lunch")
+
+
+def test_meal_log_one_step_description_only():
+    section("POST /meal-logs — one-step description-first save")
+    seed()
+
+    r = client.post(
+        "/api/members/member_meal_01/meal-logs",
+        data={"meal_name": "Pasta dinner", "description": "Pasta carbonara with garlic bread"},
+    )
+    ok("status 200", r.status_code == 200, f"got {r.status_code}")
+    data = r.json()
+    ok("signal_type is meal_logged", data["signal_type"] == "meal_logged")
+    ok("input method is one_step", data["payload"]["meal_input_method"] == "one_step")
+    ok("description saved", data["payload"]["description"] == "Pasta carbonara with garlic bread")
+    ok("meal name saved", data["payload"]["meal_name"] == "Pasta dinner")
+    ok("carbs inferred", data["payload"]["carbs_g"] == 72.0, f"got {data['payload'].get('carbs_g')!r}")
+
+
+def test_meal_log_one_step_photo_only():
+    section("POST /meal-logs — photo-only save allowed")
+    seed()
+
+    with patch(
+        "app.main.create_meal_draft",
+        return_value=MealDraftResponse(
+            description="Meal photo upload",
+            meal_name="Chicken salad",
+            meal_type="lunch",
+            carbs_g=16,
+            protein_g=28,
+            photo_attached=True,
+            analysis_summary="Estimated from the uploaded meal photo. Saved values may be approximate.",
+            analysis_confidence=0.74,
+            analysis_status="estimated",
+            analysis_source="llm",
+        ),
+    ):
+        r = client.post(
+            "/api/members/member_meal_01/meal-logs",
+            files={"photo": ("meal.jpg", b"fake-image-bytes", "image/jpeg")},
+        )
+
+    ok("status 200", r.status_code == 200, f"got {r.status_code}")
+    data = r.json()
+    ok("photo attached saved", data["payload"]["photo_attached"] is True)
+    ok("input method is one_step_with_photo", data["payload"]["meal_input_method"] == "one_step_with_photo")
+    ok("analysis meal name saved", data["payload"]["meal_name"] == "Chicken salad")
+    ok("analysis carbs saved", data["payload"]["carbs_g"] == 16)
+
+
+def test_meal_log_requires_description_or_photo():
+    section("POST /meal-logs — requires description or photo")
+    seed()
+
+    r = client.post(
+        "/api/members/member_meal_01/meal-logs",
+        data={"meal_name": "Optional name only"},
+    )
+    ok("status 422", r.status_code == 422, f"got {r.status_code}")
+    ok(
+        "validation mentions description or photo",
+        "description or photo" in json.dumps(r.json()),
+        f"got {r.text}",
+    )
+
+
+def test_meal_log_rejects_non_image_upload():
+    section("POST /meal-logs — rejects non-image uploads")
+    seed()
+
+    r = client.post(
+        "/api/members/member_meal_01/meal-logs",
+        files={"photo": ("meal.txt", b"not-an-image", "text/plain")},
+    )
+    ok("status 422", r.status_code == 422, f"got {r.status_code}")
+    ok("validation mentions image", "image" in json.dumps(r.json()), f"got {r.text}")
+
+
 def test_signal_weight_logged():
     section("POST /signals — weight_logged")
     seed()
@@ -553,6 +659,11 @@ if __name__ == "__main__":
         test_action_404_unknown,
         test_action_422_invalid_type,
         test_signal_meal_logged,
+        test_signal_meal_logged_description_first,
+        test_meal_log_one_step_description_only,
+        test_meal_log_one_step_photo_only,
+        test_meal_log_requires_description_or_photo,
+        test_meal_log_rejects_non_image_upload,
         test_signal_weight_logged,
         test_signal_re_evaluates_existing_active_nudge,
         test_signal_mood_logged,

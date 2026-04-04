@@ -193,7 +193,9 @@ Default API behavior:
 - Show one active nudge card at a time.
 - Include a short explanation such as "Why am I seeing this?" so the recommendation feels grounded in member context.
 - Offer exactly three actions: Act now, Dismiss, and Ask for help.
-- Meal logging may include optional photo capture, but the page must remain usable with structured inputs alone.
+- Meal logging should support an optional meal name, free-text details, and optional photo capture with inline preview, while the backend extracts structured nutrition fields and saves the meal in one step.
+- The page must remain usable without photo capture, and detailed meal nudges may use backend-extracted meal fields immediately in this assignment flow.
+- Meal photos may stay transient for this assignment build, but a production product would likely persist uploaded photos so members can review past uploads.
 
 ### Coach experience
 
