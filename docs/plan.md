@@ -58,13 +58,30 @@ Member switching is handled in the client so a reviewer can move across these sc
 ```mermaid
 flowchart LR
     Client["React client<br/>/member and /coach"]
-    API["FastAPI routers<br/>members, nudges, coach, debug"]
-    Engine["Decision engine<br/>phrasing<br/>meal analysis"]
+    API["FastAPI routers<br/>system, members, nudges, coach, debug"]
+
+    subgraph Runtime["Server runtime"]
+        direction TB
+        Engine["Decision engine<br/>evaluators + policy"]
+        Phrasing["Phrasing<br/>template or LLM"]
+        Meal["Meal analysis<br/>photo-only classification"]
+        Obs["Observability<br/>audit + structured logs"]
+    end
+
     Data[("SQLite<br/>members, signals, nudges,<br/>actions, escalations, audit")]
+    OAI(["OpenAI<br/>optional"])
 
     Client --> API
     API --> Engine
+    API --> Meal
+    API --> Data
+    API --> Obs
+    Engine --> Phrasing
     Engine --> Data
+    Phrasing --> Data
+    Meal --> Data
+    Phrasing -. "if configured" .-> OAI
+    Meal -. "if configured" .-> OAI
 ```
 
 Current stack:
@@ -82,7 +99,7 @@ The current engine uses three explicit evaluators.
 
 | Evaluator                  | Trigger                                                                                                                  | Confidence                      | Outcome                        |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------- | ------------------------------ |
-| `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent `meal_logged` signal in the last 24 hours has `meal_profile = higher_carb` | `0.70` base, computed 0.62–0.90 | Active `meal_guidance` nudge   |
+| `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent `meal_logged` signal in the last 24 hours has `meal_profile = higher_carb` | `0.70` base, computed 0.78–0.90 | Active `meal_guidance` nudge   |
 | `check_missing_weight_log` | No `weight_logged` signal in the last 4 days                                                                             | `0.50` base, computed 0.50–0.76 | Active `weight_check_in` nudge |
 | `check_support_risk`       | Most recent mood in the last 3 days is `low` and there have been at least 2 dismissals in the last 7 days                | `0.25` base, capped at 0.48     | Escalated `support_risk` path  |
 
