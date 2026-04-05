@@ -25,12 +25,12 @@ After `make dev`, open `http://localhost:5173/member` for the member experience 
 
 The database is pre-loaded with four members representing distinct states:
 
-| Member           | Signal                                    | Nudge trigger                                                                                                                                                                                    |
-| ---------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Alice Chen**   | Logged a pasta-and-bread meal             | Higher-carb meal against a low-carb goal → meal guidance nudge (computed confidence, typically 0.78–0.90 depending on recency and classification clarity)                                        |
-| **Bob Martinez** | No weight log in 7 days                   | Missing weight log → weight check-in nudge (computed confidence, typically 0.50–0.76 depending on overdue severity and recent activity)                                                          |
-| **Carol Davis**  | Logged "low" mood                         | Low mood signal → support escalation nudge (escalation recommended, computed confidence hard-capped below 0.48 for safety). Historical acted and dismissed nudges are visible in the coach view. |
-| **Diego Rivera** | Recent weight log, no out-of-range signal | No active nudge — demonstrates the all-good / no-nudge state                                                                                                                                     |
+| Member           | Signal                                    | Nudge trigger                                                                                                                                                                                      |
+| ---------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Alice Chen**   | Logged a pasta-and-bread meal             | Higher-carb meal against a low-carb goal → meal guidance nudge (computed confidence, typically 0.78–0.90 depending on recency and classification clarity)                                          |
+| **Bob Martinez** | No weight log in 7 days                   | Missing weight log → weight check-in nudge (computed confidence, typically 0.50–0.76 depending on overdue severity and recent activity)                                                            |
+| **Carol Davis**  | Logged "low" mood 3 times                 | Repeated low mood → support escalation nudge (escalation recommended, computed confidence hard-capped below 0.48 for safety). Historical acted and dismissed nudges are visible in the coach view. |
+| **Diego Rivera** | Recent weight log, no out-of-range signal | No active nudge — demonstrates the all-good / no-nudge state                                                                                                                                       |
 
 Switch between members using the member switcher in the top-right corner of both views.
 
@@ -52,6 +52,12 @@ When the rule engine crosses the escalation threshold, the member sees a support
 
 ![Member view showing the support escalation state for Carol Davis](docs/screenshots/member-carol-support-status.png)
 
+**Member view — no active nudge (Diego Rivera)**
+
+When all signals are within normal range, the member sees a reassuring "all set" state with quick check-in cards for logging weight, sleep, mood, and meals.
+
+![Member view showing the no-nudge state for Diego Rivera](docs/screenshots/member-diego-no-nudge.png)
+
 **Coach dashboard**
 
 The coach view lists open escalations and a full nudge history with status badges (Active, Escalated, Acted, Dismissed) so reviewers can see what the system surfaced and what members did with it.
@@ -72,7 +78,7 @@ flowchart TB
 
     subgraph Engine["Decision Engine"]
         direction LR
-        EV["Rule evaluators<br/>meal · weight · support"]
+        EV["Rule evaluators<br/>meal · weight · support · repeated mood"]
         PO["Selection policy<br/>priority · cooldown · daily cap"]
         PH["Phrasing<br/>template or LLM"]
         MA["Meal photo analysis<br/>classify meal + summary"]
