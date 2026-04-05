@@ -2,7 +2,7 @@ import json
 import sqlite3
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Path, Query
 
 from app.api.deps import DbDep
 from app.models.coach import (
@@ -11,6 +11,7 @@ from app.models.coach import (
     CoachNudgeItem,
     CoachNudgeListResponse,
 )
+from app.services.signals import utc_timestamp
 
 router = APIRouter(prefix="/api/coach", tags=["coach"])
 
@@ -125,3 +126,36 @@ def get_coach_escalations(
     items = [_build_coach_escalation_item(row) for row in rows]
 
     return CoachEscalationListResponse(items=items, limit=limit, count=len(items))
+
+
+@router.post("/escalations/{escalation_id}/resolve")
+def resolve_escalation(
+    escalation_id: Annotated[str, Path()],
+    conn: DbDep,
+) -> CoachEscalationItem:
+    row = conn.execute(
+        "SELECT e.id, e.member_id, m.name AS member_name, e.reason, e.source, e.status, e.created_at FROM escalations e JOIN members m ON e.member_id = m.id WHERE e.id = ?",
+        (escalation_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Escalation not found")
+
+    if row["status"] != "open":
+        raise HTTPException(status_code=409, detail="Escalation is already resolved")
+
+    now = utc_timestamp()
+    conn.execute(
+        "UPDATE escalations SET status = 'resolved', resolved_at = ? WHERE id = ?",
+        (now, escalation_id),
+    )
+    conn.commit()
+
+    return CoachEscalationItem(
+        escalation_id=row["id"],
+        member_id=row["member_id"],
+        member_name=row["member_name"],
+        reason=row["reason"],
+        source=row["source"],
+        status="resolved",
+        created_at=row["created_at"],
+    )
