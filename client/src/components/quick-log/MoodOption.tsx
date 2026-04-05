@@ -36,10 +36,6 @@ const MOOD_ICON_STROKE_PROPS = {
   strokeLinejoin: 'round' as const,
 };
 
-export const MOOD_LABELS: Record<MoodValue, string> = Object.fromEntries(
-  MOOD_OPTIONS.map(({ value, label }) => [value, label]),
-) as Record<MoodValue, string>;
-
 function renderMoodGlyph(mood: MoodValue, palette: MoodIconPalette) {
   const strokeProps = {
     ...MOOD_ICON_STROKE_PROPS,

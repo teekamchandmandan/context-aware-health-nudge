@@ -74,18 +74,16 @@ export default function MealForm({
     setDragging(false);
   }
 
-  function mapMealValidationMessage(validationMessage: string) {
+  function getPhotoValidationError(validationMessage: string): string | null {
     if (validationMessage.includes('meal photo')) {
-      setFieldErrors({ photo: 'Add a photo of your meal.' });
-      return true;
+      return 'Add a photo of your meal.';
     }
 
     if (validationMessage.includes('image')) {
-      setFieldErrors({ photo: 'Upload an image file for meal photos.' });
-      return true;
+      return 'Upload an image file for meal photos.';
     }
 
-    return false;
+    return null;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -113,10 +111,14 @@ export default function MealForm({
       if (error instanceof ApiError && error.status === 422) {
         const validationMessage =
           getValidationMessage(error) ?? 'Check your photo and try again.';
+        const photoError = getPhotoValidationError(validationMessage);
 
-        if (!mapMealValidationMessage(validationMessage)) {
-          onError(validationMessage);
+        if (photoError) {
+          setFieldErrors({ photo: photoError });
+          return;
         }
+
+        onError(validationMessage);
         return;
       }
 

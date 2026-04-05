@@ -19,25 +19,24 @@ export default function SleepForm({
 }: FormProps) {
   const [hours, setHours] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
-  const parsedHours = parsePositiveNumber(hours);
-  const canSubmit = parsedHours !== null && parsedHours <= 24;
+  const parsedHours = parsePositiveNumber(hours, 24);
+  const canSubmit = parsedHours !== null;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
     setFieldError(null);
 
-    const parsed = Number(hours);
-    if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 24) {
+    if (parsedHours === null) {
       setFieldError('Enter hours between 0 and 24.');
       return;
     }
 
     setSubmitting(true);
     try {
-      await postSignal(memberId, 'sleep_logged', { sleep_hours: parsed });
+      await postSignal(memberId, 'sleep_logged', { sleep_hours: parsedHours });
       onSuccess(
-        `${parsed}h logged — sleep tracking helps us personalise your plan.`,
+        `${parsedHours}h logged — sleep tracking helps us personalise your plan.`,
       );
     } catch (error) {
       if (error instanceof ApiError && error.status === 422) {
