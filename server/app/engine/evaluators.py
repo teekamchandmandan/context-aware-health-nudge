@@ -9,11 +9,12 @@ from .common import (
     MOOD_LOOKBACK_DAYS,
     NudgeCandidate,
     PRIORITY,
+    REPEATED_LOW_MOOD_COUNT,
     _now,
     _ts,
     timedelta,
 )
-from .confidence import score_meal_guidance, score_support_risk, score_weight_check_in
+from .confidence import score_meal_guidance, score_repeated_low_mood, score_support_risk, score_weight_check_in
 
 
 def check_meal_goal_mismatch(conn: sqlite3.Connection, member_id: str) -> NudgeCandidate | None:
@@ -158,8 +159,58 @@ def check_support_risk(conn: sqlite3.Connection, member_id: str) -> NudgeCandida
     )
 
 
+def check_repeated_low_mood(conn: sqlite3.Connection, member_id: str) -> NudgeCandidate | None:
+    now = _now()
+    mood_cutoff = _ts(now - timedelta(days=MOOD_LOOKBACK_DAYS))
+
+    row = conn.execute(
+        """SELECT COUNT(*) AS cnt, MAX(created_at) AS latest_ts
+           FROM signals
+           WHERE member_id = ? AND signal_type = 'mood_logged' AND created_at >= ?
+             AND json_extract(payload_json, '$.mood') = 'low'""",
+        (member_id, mood_cutoff),
+    ).fetchone()
+
+    count = row["cnt"]
+    if count < REPEATED_LOW_MOOD_COUNT:
+        return None
+
+    latest_ts = row["latest_ts"]
+
+    signal_ids = [
+        r["id"]
+        for r in conn.execute(
+            """SELECT id FROM signals
+               WHERE member_id = ? AND signal_type = 'mood_logged' AND created_at >= ?
+                 AND json_extract(payload_json, '$.mood') = 'low'
+               ORDER BY created_at DESC""",
+            (member_id, mood_cutoff),
+        ).fetchall()
+    ]
+
+    confidence, factors = score_repeated_low_mood(
+        low_mood_count=count,
+        most_recent_mood_ts=latest_ts,
+        mood_lookback_days=MOOD_LOOKBACK_DAYS,
+        threshold=REPEATED_LOW_MOOD_COUNT,
+    )
+
+    return NudgeCandidate(
+        nudge_type="support_risk",
+        matched_reason="repeated_low_mood",
+        explanation_basis=f"Low mood logged {count} times in the last {MOOD_LOOKBACK_DAYS} days",
+        confidence=confidence,
+        confidence_factors=factors,
+        escalation_recommended=True,
+        source_signal_ids=signal_ids,
+        priority=PRIORITY["support_risk"],
+        latest_signal_ts=latest_ts,
+    )
+
+
 ALL_EVALUATORS = [
     check_meal_goal_mismatch,
     check_missing_weight_log,
     check_support_risk,
+    check_repeated_low_mood,
 ]
