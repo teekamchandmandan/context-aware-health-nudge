@@ -24,7 +24,6 @@ SYSTEM_PROMPT = (
 def request_llm_json(request_model: PhrasingRequest, api_key: str) -> tuple[str, str]:
     payload = {
         "model": OPENAI_MODEL,
-        "temperature": 0.1,
         "response_format": {"type": "json_object"},
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},

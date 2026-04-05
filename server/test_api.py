@@ -21,7 +21,10 @@ from app.core.config import OPENAI_MODEL
 from app.database import _connect
 from app.main import app
 from app.meal_analysis import create_meal_draft
+from app.meal_analysis.provider import request_meal_analysis_json as request_meal_analysis_provider_json
 from app.models.meals import MealDraftResponse
+from app.phrasing.models import PhrasingRequest
+from app.phrasing.provider import request_llm_json as request_phrasing_provider_json
 from app.seed import reset_and_seed
 
 client = TestClient(app)
@@ -370,6 +373,68 @@ def test_meal_analysis_provider_uses_photo_only_payload():
     )
 
 
+def test_meal_analysis_provider_omits_temperature_for_gpt5_models():
+    section("Meal analysis — provider payload omits unsupported temperature")
+    seed()
+
+    with patch(
+        "app.meal_analysis.provider._request_chat_completion",
+        return_value={
+            "choices": [
+                {
+                    "message": {
+                        "content": '{"meal_profile":"balanced","visible_food_summary":null}',
+                    }
+                }
+            ],
+            "model": "gpt-5-mini",
+        },
+    ) as mocked_request:
+        raw_content, model_name = request_meal_analysis_provider_json(
+            "test-key",
+            photo_bytes=b"fake-image-bytes",
+            photo_content_type="image/jpeg",
+        )
+
+    ok("provider returns mocked model name", model_name == "gpt-5-mini", f"got {model_name!r}")
+    ok("provider returns mocked content", "balanced" in raw_content, f"got {raw_content!r}")
+    payload = mocked_request.call_args.kwargs["payload"]
+    ok("temperature omitted", "temperature" not in payload, f"got {payload!r}")
+
+
+def test_phrasing_provider_omits_temperature_for_gpt5_models():
+    section("Phrasing — provider payload omits unsupported temperature")
+    seed()
+
+    with patch(
+        "app.phrasing.provider._request_chat_completion",
+        return_value={
+            "choices": [
+                {
+                    "message": {
+                        "content": '{"content":"Try a lighter dinner tonight.","explanation":"You logged a higher-carb meal today."}',
+                    }
+                }
+            ],
+            "model": "gpt-5-mini",
+        },
+    ) as mocked_request:
+        raw_content, model_name = request_phrasing_provider_json(
+            PhrasingRequest(
+                nudge_type="meal_guidance",
+                member_goal="low_carb",
+                matched_reason="meal_goal_mismatch",
+                explanation_basis="A recent meal exceeded the member's low-carb target.",
+            ),
+            "test-key",
+        )
+
+    ok("provider returns mocked model name", model_name == "gpt-5-mini", f"got {model_name!r}")
+    ok("provider returns mocked content", "lighter dinner" in raw_content, f"got {raw_content!r}")
+    payload = mocked_request.call_args.kwargs["payload"]
+    ok("temperature omitted", "temperature" not in payload, f"got {payload!r}")
+
+
 def test_meal_analysis_llm_audit_records_model_name():
     section("Meal analysis — llm_call audit records prompt area and model")
     seed()
@@ -558,6 +623,21 @@ def test_meal_log_one_step_photo_only():
         data["payload"]["visible_food_summary"] == "The photo appears to show grilled chicken and vegetables.",
         f"got {data['payload']!r}",
     )
+
+
+def test_meal_log_rejects_unsupported_image_format():
+    section("POST /meal-logs — rejects unsupported image formats")
+    seed()
+
+    with patch("app.main.create_meal_draft") as mocked_create_meal_draft:
+        r = client.post(
+            "/api/members/member_meal_01/meal-logs",
+            files={"photo": ("meal.avif", b"fake-image-bytes", "image/avif")},
+        )
+
+    ok("status 422", r.status_code == 422, f"got {r.status_code}")
+    ok("validation mentions supported formats", "webp" in json.dumps(r.json()).lower(), f"got {r.text}")
+    ok("analysis not called", mocked_create_meal_draft.call_count == 0, f"got {mocked_create_meal_draft.call_count}")
 
 
 def test_meal_log_requires_photo():

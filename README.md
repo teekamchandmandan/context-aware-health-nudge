@@ -97,13 +97,15 @@ Architecture at a glance:
 
 ### LLM Prompts and Evaluation
 
-Two bounded LLM calls exist in the system. Both use `temperature=0.1` for near-deterministic outputs and have template fallbacks, so the system works identically without an API key.
+Two bounded LLM calls exist in the system. Both use structured outputs with fallback paths, so the system works identically without an API key.
 
 **Nudge phrasing** (`server/app/phrasing/provider.py`)
 The model receives a structured payload — nudge type, member goal, matched reason, explanation basis, tone, and character limits — and is instructed to rewrite the approved nudge text without changing the underlying decision, adding new facts, or introducing medical framing. It returns a JSON object with two fields: `content` (member-facing sentence, ≤120 chars) and `explanation` (why the nudge appeared, ≤120 chars). Output is validated against a blocklist of 14 medical/clinical terms (`diagnose`, `medication`, `prescription`, `dose`, `treatment plan`, `doctor`, `clinician`, `therapy`, and others). Any validation failure, timeout, JSON parse error, or missing key falls back to a static template, and `phrasing_source` in the audit log records which path was taken.
 
 **Meal photo classification** (`server/app/meal_analysis/provider.py`)
 The model receives only the image — no member context, no written description — and classifies visible food items into one of four profiles: `higher_carb`, `higher_protein`, `balanced`, or `unclear`. It returns a `visible_food_summary` (one factual sentence ≤160 chars describing only visible items, or null). The model is explicitly instructed to return `unclear` when the image is blurry, cropped, or does not support a confident classification. No advice, warnings, or coaching is permitted. The classification is an input signal to the rule engine; the engine makes the final nudge decision.
+
+The current upload path accepts PNG, JPEG, GIF, and WEBP meal photos up to 10 MB. Unsupported formats are rejected before analysis so the member gets a clear retry path instead of a vague fallback.
 
 For the full product rationale, assumptions, success metrics, and rollout plan, see [docs/product-technical-note.md](docs/product-technical-note.md). For a step-by-step reviewer walkthrough of each seeded scenario, see [docs/manual-verification.md](docs/manual-verification.md).
 

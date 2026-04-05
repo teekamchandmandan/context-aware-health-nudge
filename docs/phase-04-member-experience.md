@@ -64,6 +64,7 @@ This route is distinct from the coach experience and should remain member-only i
 - Require meal logging to start with photo capture or upload, while still avoiding macro entry up front.
 - Add inline image preview for uploaded meal photos.
 - Keep the meal flow to one save action with no intermediate review step.
+- Label the supported meal photo formats clearly in the member UI so unsupported uploads can be corrected before submit.
 - Do not surface coach-only controls, coach-facing reasoning details, or direct coach navigation in the member route.
 
 ## Design Adaptation Note

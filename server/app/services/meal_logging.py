@@ -9,6 +9,16 @@ from app.models.meals import MealDraftResponse
 
 MAX_PHOTO_BYTES = 10 * 1024 * 1024  # 10 MB
 ALLOWED_MEAL_UPLOAD_FIELDS = frozenset({"photo"})
+SUPPORTED_MEAL_IMAGE_CONTENT_TYPES = frozenset(
+    {
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+    }
+)
+SUPPORTED_MEAL_IMAGE_DETAIL = "meal photo must be a PNG, JPEG, GIF, or WEBP image"
 
 
 def _get_create_meal_draft():
@@ -34,9 +44,11 @@ async def read_meal_photo(
             raise HTTPException(status_code=422, detail="meal logging requires a meal photo")
         return None, None
 
-    photo_content_type = photo.content_type or ""
+    photo_content_type = (photo.content_type or "").split(";", 1)[0].strip().lower()
     if require_image and not photo_content_type.startswith("image/"):
         raise HTTPException(status_code=422, detail="meal photo must be an image")
+    if require_image and photo_content_type not in SUPPORTED_MEAL_IMAGE_CONTENT_TYPES:
+        raise HTTPException(status_code=422, detail=SUPPORTED_MEAL_IMAGE_DETAIL)
 
     data = await photo.read()
     if len(data) > MAX_PHOTO_BYTES:

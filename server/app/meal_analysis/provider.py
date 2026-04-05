@@ -27,7 +27,6 @@ def request_meal_analysis_json(
 ) -> tuple[str, str]:
     payload = {
         "model": OPENAI_MODEL,
-        "temperature": 0.1,
         "response_format": {"type": "json_object"},
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},

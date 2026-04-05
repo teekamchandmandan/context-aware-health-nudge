@@ -45,8 +45,37 @@ function CameraUploadIcon() {
   );
 }
 
-const INVALID_PHOTO_MESSAGE = 'Upload an image file for meal photos.';
-const INVALID_DROP_MESSAGE = 'Please drop an image file.';
+const SUPPORTED_MEAL_PHOTO_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/gif',
+  'image/webp',
+]);
+const SUPPORTED_MEAL_PHOTO_EXTENSIONS = [
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.webp',
+];
+const SUPPORTED_MEAL_PHOTO_ACCEPT =
+  'image/png,image/jpeg,image/jpg,image/gif,image/webp';
+const SUPPORTED_MEAL_PHOTO_MESSAGE = 'PNG, JPEG, GIF, or WEBP up to 10 MB.';
+const INVALID_PHOTO_MESSAGE = 'Upload a PNG, JPEG, GIF, or WEBP image.';
+const INVALID_DROP_MESSAGE = 'Please drop a PNG, JPEG, GIF, or WEBP image.';
+
+function isSupportedMealPhoto(file: File): boolean {
+  const normalizedType = file.type.trim().toLowerCase();
+  if (normalizedType && SUPPORTED_MEAL_PHOTO_TYPES.has(normalizedType)) {
+    return true;
+  }
+
+  const normalizedName = file.name.trim().toLowerCase();
+  return SUPPORTED_MEAL_PHOTO_EXTENSIONS.some((extension) =>
+    normalizedName.endsWith(extension),
+  );
+}
 
 export default function MealForm({
   memberId,
@@ -103,7 +132,7 @@ export default function MealForm({
       return;
     }
 
-    if (!file.type.startsWith('image/')) {
+    if (!isSupportedMealPhoto(file)) {
       setFieldErrors({ photo: INVALID_PHOTO_MESSAGE });
       return;
     }
@@ -130,12 +159,23 @@ export default function MealForm({
   }
 
   function getPhotoValidationError(validationMessage: string): string | null {
-    if (validationMessage.includes('meal photo')) {
+    if (
+      validationMessage.includes('PNG, JPEG, GIF, or WEBP') ||
+      validationMessage.includes('meal photo must be a PNG')
+    ) {
+      return INVALID_PHOTO_MESSAGE;
+    }
+
+    if (validationMessage.includes('requires a meal photo')) {
       return 'Add a photo of your meal.';
     }
 
+    if (validationMessage.includes('10 MB')) {
+      return 'Meal photos must be 10 MB or smaller.';
+    }
+
     if (validationMessage.includes('image')) {
-      return 'Upload an image file for meal photos.';
+      return INVALID_PHOTO_MESSAGE;
     }
 
     return null;
@@ -205,6 +245,9 @@ export default function MealForm({
           <p className='mt-1 text-xs text-[var(--color-muted)]'>
             or choose from your gallery
           </p>
+          <p className='mt-2 text-xs text-[var(--color-muted)]'>
+            {SUPPORTED_MEAL_PHOTO_MESSAGE}
+          </p>
           <label
             htmlFor='meal-photo'
             className='mt-4 inline-flex cursor-pointer items-center justify-center rounded-full border border-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-primary)] transition hover:bg-[rgba(168,239,239,0.12)]'
@@ -216,7 +259,7 @@ export default function MealForm({
             id='meal-photo'
             name='meal_photo'
             type='file'
-            accept='image/*'
+            accept={SUPPORTED_MEAL_PHOTO_ACCEPT}
             onChange={handlePhotoChange}
             className='sr-only'
           />
