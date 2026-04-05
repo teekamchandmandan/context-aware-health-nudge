@@ -15,7 +15,7 @@ def test_member_nudge_active(api_client):
     nudge = data["nudge"]
     assert nudge["nudge_type"] == "meal_guidance"
     assert nudge["content"]
-    assert nudge["confidence"] == 0.86
+    assert 0.70 <= nudge["confidence"] <= 0.95, f"meal confidence {nudge['confidence']} out of expected range"
     assert nudge["status"] == "active"
     assert nudge["phrasing_source"] == "template"
     assert "created_at" in nudge

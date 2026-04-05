@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/coach", tags=["coach"])
 
 COACH_NUDGES_QUERY = """SELECT n.id, n.member_id, m.name AS member_name, n.nudge_type,
                               n.content, n.explanation, n.matched_reason, n.confidence,
+                              n.confidence_factors_json,
                               n.escalation_recommended, n.status, n.phrasing_source,
                               n.created_at,
                               (
@@ -71,6 +72,8 @@ def _get_coach_nudge_visible_food_summary(row: sqlite3.Row) -> str | None:
 
 
 def _build_coach_nudge_item(row: sqlite3.Row) -> CoachNudgeItem:
+    factors_raw = row["confidence_factors_json"]
+    factors = json.loads(factors_raw) if factors_raw else None
     return CoachNudgeItem(
         nudge_id=row["id"],
         member_id=row["member_id"],
@@ -81,6 +84,7 @@ def _build_coach_nudge_item(row: sqlite3.Row) -> CoachNudgeItem:
         explanation=row["explanation"],
         matched_reason=row["matched_reason"],
         confidence=row["confidence"],
+        confidence_factors=factors,
         escalation_recommended=bool(row["escalation_recommended"]),
         status=row["status"],
         latest_action=row["latest_action_type"],

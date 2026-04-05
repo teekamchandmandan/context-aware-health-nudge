@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 from app import phrasing
@@ -15,12 +16,13 @@ def create_nudge_row(
     template = phrasing.get_template_phrasing(candidate.nudge_type)
     content = template["content"] if status == "active" else None
     explanation = template["explanation"] if status == "active" else candidate.explanation_basis
+    factors_json = json.dumps(candidate.confidence_factors) if candidate.confidence_factors else None
     conn.execute(
         """INSERT INTO nudges
            (id, member_id, nudge_type, content, explanation, matched_reason,
-            confidence, escalation_recommended, status, generated_by, phrasing_source,
+            confidence, confidence_factors_json, escalation_recommended, status, generated_by, phrasing_source,
             created_at, delivered_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             nudge_id,
             member_id,
@@ -29,6 +31,7 @@ def create_nudge_row(
             explanation,
             candidate.matched_reason,
             candidate.confidence,
+            factors_json,
             1 if candidate.escalation_recommended else 0,
             status,
             "rule_engine",

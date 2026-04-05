@@ -66,7 +66,12 @@ Successful responses should always include a `state` field.
     "content": "Try a lighter, lower-carb dinner to balance today's earlier meal.",
     "explanation": "You logged a higher-carb meal today and your goal is low carb.",
     "matched_reason": "meal_goal_mismatch",
-    "confidence": 0.86,
+    "confidence": 0.82,
+    "confidence_factors": [
+      {"name": "base", "value": 0.70, "label": "Goal–meal mismatch matched"},
+      {"name": "recency", "value": 0.04, "label": "Meal logged 5h ago"},
+      {"name": "clarity", "value": 0.08, "label": "Classification clear (higher_carb)"}
+    ],
     "escalation_recommended": false,
     "status": "active",
     "phrasing_source": "template",

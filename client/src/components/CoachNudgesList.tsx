@@ -224,6 +224,38 @@ export default function CoachNudgesList({ items }: Props) {
                         </span>
                       </div>
                     </section>
+
+                    {n.confidence_factors && n.confidence_factors.length > 0 && (
+                      <section className='rounded-[1.35rem] border border-[rgba(190,200,200,0.45)] bg-white/72 p-4'>
+                        <p className='text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]'>
+                          Confidence breakdown
+                        </p>
+                        <ul className='mt-3 space-y-1.5'>
+                          {n.confidence_factors.map((f) => (
+                            <li
+                              key={f.name}
+                              className='flex items-center justify-between text-xs'
+                            >
+                              <span className='text-[var(--color-text)]'>
+                                {f.label}
+                              </span>
+                              <span
+                                className={`ml-2 shrink-0 font-mono font-semibold ${
+                                  f.value > 0
+                                    ? 'text-[var(--color-accent)]'
+                                    : f.value < 0
+                                      ? 'text-[var(--color-error)]'
+                                      : 'text-[var(--color-muted)]'
+                                }`}
+                              >
+                                {f.value > 0 ? '+' : ''}
+                                {f.value.toFixed(2)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    )}
                   </div>
                 </div>
 

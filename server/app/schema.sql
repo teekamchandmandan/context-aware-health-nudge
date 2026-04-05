@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS nudges (
     explanation            TEXT,
     matched_reason         TEXT,
     confidence             REAL CHECK(confidence IS NULL OR (confidence >= 0 AND confidence <= 1)),
+    confidence_factors_json TEXT,
     escalation_recommended INTEGER DEFAULT 0 CHECK(escalation_recommended IN (0, 1)),
     status                 TEXT NOT NULL CHECK(status IN ('active', 'acted', 'dismissed', 'escalated', 'superseded')),
     generated_by           TEXT NOT NULL DEFAULT 'rule_engine',

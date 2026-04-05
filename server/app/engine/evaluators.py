@@ -12,6 +12,7 @@ from .common import (
     _ts,
     timedelta,
 )
+from .confidence import score_meal_guidance, score_support_risk, score_weight_check_in
 
 
 def check_meal_goal_mismatch(conn: sqlite3.Connection, member_id: str) -> NudgeCandidate | None:
@@ -38,11 +39,18 @@ def check_meal_goal_mismatch(conn: sqlite3.Connection, member_id: str) -> NudgeC
     if payload.get("meal_profile") != "higher_carb":
         return None
 
+    confidence, factors = score_meal_guidance(
+        signal_ts=signal["created_at"],
+        meal_profile=payload.get("meal_profile", "unclear"),
+        lookback_hours=MEAL_LOOKBACK_HOURS,
+    )
+
     return NudgeCandidate(
         nudge_type="meal_guidance",
         matched_reason="meal_goal_mismatch",
         explanation_basis="Recent meal looked higher carb for a low-carb goal",
-        confidence=0.86,
+        confidence=confidence,
+        confidence_factors=factors,
         escalation_recommended=False,
         source_signal_ids=[signal["id"]],
         priority=PRIORITY["meal_guidance"],
@@ -68,11 +76,35 @@ def check_missing_weight_log(conn: sqlite3.Connection, member_id: str) -> NudgeC
     if signal:
         return None
 
+    last_weight = conn.execute(
+        "SELECT created_at FROM signals WHERE member_id = ? AND signal_type = 'weight_logged' ORDER BY created_at DESC LIMIT 1",
+        (member_id,),
+    ).fetchone()
+    if last_weight:
+        from datetime import datetime, timezone
+        last_dt = datetime.fromisoformat(last_weight["created_at"].replace("Z", "+00:00"))
+        days_since = (_now() - last_dt).total_seconds() / 86400
+    else:
+        days_since = float(MISSING_WEIGHT_DAYS * 2)
+
+    activity_cutoff = _ts(_now() - timedelta(days=7))
+    has_recent_activity = conn.execute(
+        "SELECT 1 FROM signals WHERE member_id = ? AND signal_type != 'weight_logged' AND created_at >= ? LIMIT 1",
+        (member_id, activity_cutoff),
+    ).fetchone() is not None
+
+    confidence, factors = score_weight_check_in(
+        days_since_last_weight=days_since,
+        threshold_days=MISSING_WEIGHT_DAYS,
+        has_recent_activity=has_recent_activity,
+    )
+
     return NudgeCandidate(
         nudge_type="weight_check_in",
         matched_reason="missing_weight_log",
         explanation_basis=f"No weight logged in the last {MISSING_WEIGHT_DAYS} days",
-        confidence=0.68,
+        confidence=confidence,
+        confidence_factors=factors,
         escalation_recommended=False,
         source_signal_ids=[],
         priority=PRIORITY["weight_check_in"],
@@ -106,11 +138,19 @@ def check_support_risk(conn: sqlite3.Connection, member_id: str) -> NudgeCandida
     if dismiss_count < 2:
         return None
 
+    confidence, factors = score_support_risk(
+        mood_signal_ts=mood_signal["created_at"],
+        dismiss_count=dismiss_count,
+        mood_lookback_days=MOOD_LOOKBACK_DAYS,
+        dismiss_lookback_days=DISMISS_LOOKBACK_DAYS,
+    )
+
     return NudgeCandidate(
         nudge_type="support_risk",
         matched_reason="support_risk",
         explanation_basis=f"Low mood reported; {dismiss_count} nudges dismissed in last {DISMISS_LOOKBACK_DAYS} days",
-        confidence=0.42,
+        confidence=confidence,
+        confidence_factors=factors,
         escalation_recommended=True,
         source_signal_ids=[mood_signal["id"]],
         priority=PRIORITY["support_risk"],
