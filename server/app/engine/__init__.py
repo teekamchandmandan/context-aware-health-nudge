@@ -28,13 +28,17 @@ def evaluate_member(conn: sqlite3.Connection, member_id: str) -> dict:
                 "SELECT id FROM escalations WHERE nudge_id = ? AND status = 'open' LIMIT 1",
                 (escalated["id"],),
             ).fetchone()
-            return {
-                "state": "escalated",
-                "nudge_id": escalated["id"],
-                "escalation_id": esc_row["id"] if esc_row else None,
-            }
+            if esc_row:
+                return {
+                    "state": "escalated",
+                    "nudge_id": escalated["id"],
+                    "escalation_id": esc_row["id"],
+                }
 
-        supersede_active_nudge(conn, escalated["id"])
+            supersede_active_nudge(conn, escalated["id"])
+
+        else:
+            supersede_active_nudge(conn, escalated["id"])
 
     candidate = select_nudge(conn, member_id)
     if not candidate:
