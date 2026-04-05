@@ -12,7 +12,7 @@ Use this checklist to verify the seeded scenarios, one live signal change, one f
 - [ ] Open `/member?memberId=member_meal_01`
 - [ ] Confirm an active nudge appears with meal-guidance content
 - [ ] Confirm the "Why this may help" explanation references her low-carb goal and a higher-carb meal
-- [ ] Click **"I will do this"** → confirmation message appears briefly → nudge resolves to "You're all set"
+- [ ] Click **"I will do this"** → confirmation message appears briefly → nudge resolves to the "All set" state with "Your routine looks steady today."
 - [ ] Navigate to `/coach` → Alice's nudge appears in Recent Nudges with status **Acted**
 - [ ] Expand the nudge row → confirm content, explanation, matched reason (`meal_goal_mismatch`), and confidence (`0.86`) are visible
 
@@ -35,7 +35,7 @@ Use this checklist to verify the seeded scenarios, one live signal change, one f
 ## 4. Seeded Scenario: No Nudge (Diego Rivera)
 
 - [ ] Open `/member?memberId=member_catchup_01`
-- [ ] Confirm the member sees a "You're all set" state with no active nudge
+- [ ] Confirm the member sees the "All set" state with "Your routine looks steady today." and no active nudge
 - [ ] Confirm Diego does not appear in coach escalations
 
 ## 5. Live Signal: Weight Log Triggers Re-evaluation
@@ -86,7 +86,7 @@ Use this checklist to verify the seeded scenarios, one live signal change, one f
 
 ## 11. Responsive Spot-Check
 
-- [ ] Open `/member` at desktop width (≥1024px) → layout is clean, quick-log grid is 4-column-ish
+- [ ] Open `/member` at desktop width (≥1024px) → layout is clean; quick-log shows 3 side-by-side cards/sections (weight, sleep, mood) with the meal log spanning the full row
 - [ ] Resize to tablet width (~768px) → layout adapts, no horizontal overflow
 - [ ] Resize to mobile width (~375px) → single-column, all content accessible, no truncation of nudge text
 - [ ] Repeat for `/coach` — escalation grid and nudge list adapt to narrower widths

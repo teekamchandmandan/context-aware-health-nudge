@@ -42,7 +42,7 @@ In this repo, these metrics are only partially observable through `audit_events`
 
 **Risk:** Members receive too many nudges and begin ignoring or dismissing them, reducing trust in the system.
 
-**Mitigation:** The engine enforces a 24-hour cooldown per nudge type after any action and a daily cap of 2 auto-delivered nudges. Support-risk bypasses these limits because under-nudging in a safety-relevant case is a worse outcome than a single extra notification.
+**Mitigation:** The engine enforces a 24-hour cooldown per nudge type after a member selects `act_now` or `dismiss`, plus a daily cap of 2 auto-delivered nudges. Support-risk bypasses these limits because under-nudging in a safety-relevant case is a worse outcome than a single extra notification.
 
 ### LLM phrasing producing unsafe content
 

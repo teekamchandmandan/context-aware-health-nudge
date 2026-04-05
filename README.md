@@ -46,7 +46,7 @@ Reviewer docs:
 - **[Product and Technical Note](docs/product-technical-note.md):** User problem, assumptions, success metrics, and rollout plan.
 - **[Manual Verification](docs/manual-verification.md):** Walkthrough checklists for testing the seeded scenarios, live inputs, and structural fallbacks.
 - **[Decision Record](docs/plan.md):** The as-built system summary, component rationale, and constraints.
-- **Implementation Specs:** `docs/phase-01-*.md` through `phase-09-*.md` contain the historical branch-by-branch specifications.
+- **Implementation Specs:** `docs/phase-01-*.md` through `docs/phase-09-*.md` contain the historical branch-by-branch specifications.
 
 ## Demo Reset (Admin Only)
 
