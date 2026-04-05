@@ -108,6 +108,11 @@ def _seed(conn: sqlite3.Connection) -> None:
             "It has been a few days since your last weigh-in.",
             "missing_weight_log",
             0.68,
+            json.dumps([
+                {"name": "base", "value": 0.50, "label": "Weight log overdue"},
+                {"name": "overdue", "value": 0.09, "label": "5d since last weight log (1d past threshold)"},
+                {"name": "activity", "value": 0.08, "label": "Member active on other signals"},
+            ]),
             0,
             "acted",
             "rule_engine",
@@ -123,6 +128,11 @@ def _seed(conn: sqlite3.Connection) -> None:
             "It had been a few days since your last logged update.",
             "missing_weight_log",
             0.68,
+            json.dumps([
+                {"name": "base", "value": 0.50, "label": "Weight log overdue"},
+                {"name": "overdue", "value": 0.14, "label": "7d since last weight log (3d past threshold)"},
+                {"name": "activity", "value": 0.04, "label": "No other recent activity"},
+            ]),
             0,
             "dismissed",
             "rule_engine",
@@ -138,6 +148,11 @@ def _seed(conn: sqlite3.Connection) -> None:
             "A recent check-in would help us keep your guidance current.",
             "missing_weight_log",
             0.68,
+            json.dumps([
+                {"name": "base", "value": 0.50, "label": "Weight log overdue"},
+                {"name": "overdue", "value": 0.14, "label": "7d since last weight log (3d past threshold)"},
+                {"name": "activity", "value": 0.04, "label": "No other recent activity"},
+            ]),
             0,
             "dismissed",
             "rule_engine",
@@ -149,9 +164,9 @@ def _seed(conn: sqlite3.Connection) -> None:
     conn.executemany(
         """INSERT INTO nudges
            (id, member_id, nudge_type, content, explanation, matched_reason,
-            confidence, escalation_recommended, status, generated_by, phrasing_source,
+            confidence, confidence_factors_json, escalation_recommended, status, generated_by, phrasing_source,
             created_at, delivered_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         nudges,
     )
 
