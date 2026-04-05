@@ -5,7 +5,6 @@ from app.core.openai_chat import extract_message_content as _extract_message_con
 from app.core.openai_chat import extract_model_name as _extract_model_name
 from app.core.openai_chat import parse_json_output as _parse_json_output
 from app.core.openai_chat import request_chat_completion as _request_chat_completion
-from app.core.openai_chat import strip_code_fences as _strip_code_fences
 from app.core.config import MEAL_ANALYSIS_TIMEOUT_SECONDS, OPENAI_MODEL
 
 SYSTEM_PROMPT = (
@@ -88,10 +87,6 @@ def extract_message_content(body: dict) -> str:
         text_value_keys=("text",),
         error_message="provider returned no text content",
     )
-
-
-def strip_code_fences(content: str) -> str:
-    return _strip_code_fences(content)
 
 
 def extract_model_name(body: dict) -> str:
