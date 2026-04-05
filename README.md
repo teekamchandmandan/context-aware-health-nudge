@@ -39,6 +39,5 @@ This wipes the SQLite database and restores the initial seeded member scenarios,
 
 ## AI Usage Disclosure
 
-// TODO: Finalize this section based on actual AI usage during development. Be specific about which tools were used for which tasks, and how human review was involved.
-LLM tools (GitHub Copilot) were used as pair-programming assistants to accelerate scaffolding, draft planning documentation, write utility boilerplate, and generate localized React components.
+GitHub Copilot was used during development as a pair-programming assistant to help accelerate scaffolding, draft planning documentation, write utility boilerplate, and generate localized React components. All AI-assisted output was reviewed, edited, and validated by a human before being committed.
 

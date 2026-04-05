@@ -28,7 +28,7 @@ export default function SleepForm({
     setFieldError(null);
 
     if (parsedHours === null) {
-      setFieldError('Enter hours between 0 and 24.');
+      setFieldError('Enter hours greater than 0 and up to 24.');
       return;
     }
 
@@ -67,7 +67,7 @@ export default function SleepForm({
             name='sleep_hours'
             type='number'
             step='0.5'
-            min='0'
+            min='0.5'
             max='24'
             inputMode='decimal'
             autoComplete='off'

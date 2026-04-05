@@ -28,14 +28,15 @@ COACH_NUDGES_QUERY = """SELECT n.id, n.member_id, m.name AS member_name, n.nudge
                                   ORDER BY s.created_at DESC
                                   LIMIT 1
                               ) AS meal_payload_json,
-                              la.action_type AS latest_action_type
+                              (
+                                  SELECT na.action_type
+                                  FROM nudge_actions na
+                                  WHERE na.nudge_id = n.id
+                                  ORDER BY na.created_at DESC, na.id DESC
+                                  LIMIT 1
+                              ) AS latest_action_type
                        FROM nudges n
                        JOIN members m ON n.member_id = m.id
-                       LEFT JOIN (
-                           SELECT nudge_id, action_type, MAX(created_at) AS max_created_at
-                           FROM nudge_actions
-                           GROUP BY nudge_id
-                       ) la ON la.nudge_id = n.id
                        ORDER BY n.created_at DESC
                        LIMIT ?"""
 
