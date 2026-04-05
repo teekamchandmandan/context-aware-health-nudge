@@ -14,6 +14,7 @@ def record_nudge_generated(
     *,
     phrasing_source: str,
     escalation_decision: bool,
+    llm_model_name: str | None = None,
 ) -> None:
     payload = {
         "member_id": member_id,
@@ -23,6 +24,8 @@ def record_nudge_generated(
         "confidence": candidate.confidence,
         "phrasing_source": phrasing_source,
     }
+    if llm_model_name is not None:
+        payload["llm_model_name"] = llm_model_name
     record_audit_event(conn, "nudge_generated", "nudge", nudge_id, payload)
     log_structured_event(
         logging.INFO,

@@ -40,13 +40,13 @@ The assignment asks for logging that supports performance, quality, and safety. 
 
 Each event should store a compact JSON payload with only the fields needed for review.
 
-| Event type           | Minimum payload fields                                                                   |
-| -------------------- | ---------------------------------------------------------------------------------------- |
-| `nudge_generated`    | `member_id`, `nudge_id`, `nudge_type`, `matched_reason`, `confidence`, `phrasing_source` |
-| `user_action`        | `member_id`, `nudge_id`, `action_type`, `previous_status`, `new_status`                  |
-| `escalation_created` | `member_id`, `nudge_id`, `reason`, `source`, `status`                                    |
-| `llm_call`           | `member_id`, `nudge_type`, `provider`, `success`, `latency_ms`                           |
-| `llm_fallback`       | `member_id`, `nudge_type`, `fallback_reason`                                             |
+| Event type           | Minimum payload fields                                                                                                                    |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `nudge_generated`    | `member_id`, `nudge_id`, `nudge_type`, `matched_reason`, `confidence`, `phrasing_source`, and `llm_model_name` when phrasing used the LLM |
+| `user_action`        | `member_id`, `nudge_id`, `action_type`, `previous_status`, `new_status`                                                                   |
+| `escalation_created` | `member_id`, `nudge_id`, `reason`, `source`, `status`                                                                                     |
+| `llm_call`           | `member_id`, `prompt_area`, `model_name`, `success`, `latency_ms`, plus contextual fields such as `nudge_type` when applicable            |
+| `llm_fallback`       | `member_id`, `prompt_area`, `model_name`, `fallback_reason`, plus contextual fields such as `nudge_type` when applicable                  |
 
 ## Logging Defaults
 
@@ -54,6 +54,7 @@ Each event should store a compact JSON payload with only the fields needed for r
 - Use `INFO` for lifecycle events and `WARNING` for fallback or validation failures.
 - Keep audit rows in SQLite for the lifetime of the local database.
 - Do not add file rotation or external sinks in this assignment unless needed for a local demo.
+- Use the provider-returned model name when available so audit rows reflect the actual model that handled a call.
 
 ## Useful Review Metrics
 
@@ -69,6 +70,7 @@ Each event should store a compact JSON payload with only the fields needed for r
 - Audit events should capture durable product history.
 - Structured application logs should capture runtime behavior useful during local review and debugging.
 - Avoid duplicating sensitive or noisy payloads when summary fields are enough.
+- Keep `llm_call` and `llm_fallback` as the stable event names and distinguish prompt surfaces with `prompt_area`.
 - Coach pages should continue to read from nudge and escalation records; audit events are primarily for backend review in this prototype.
 
 ## Implementation Notes

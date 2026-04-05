@@ -6,6 +6,7 @@ class CoachNudgeItem(BaseModel):
     member_id: str
     member_name: str
     nudge_type: str
+    visible_food_summary: str | None = None
     content: str | None = None
     explanation: str | None = None
     matched_reason: str | None = None

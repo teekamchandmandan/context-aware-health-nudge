@@ -202,6 +202,11 @@ export default function CoachNudgesList({ items }: Props) {
                       <p className='text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]'>
                         Context
                       </p>
+                      {n.visible_food_summary && (
+                        <p className='mt-3 text-sm leading-7 text-[var(--color-text)] sm:text-[0.95rem]'>
+                          {n.visible_food_summary}
+                        </p>
+                      )}
                       <div className='mt-3 flex flex-wrap items-center gap-2'>
                         {n.escalation_recommended && (
                           <span className='rounded-full bg-[rgba(255,209,102,0.25)] px-3 py-1 text-xs font-medium text-[var(--color-warning-text)]'>

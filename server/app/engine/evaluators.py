@@ -3,7 +3,6 @@ import sqlite3
 
 from .common import (
     DISMISS_LOOKBACK_DAYS,
-    MEAL_CARB_THRESHOLD,
     MEAL_LOOKBACK_HOURS,
     MISSING_WEIGHT_DAYS,
     MOOD_LOOKBACK_DAYS,
@@ -36,15 +35,13 @@ def check_meal_goal_mismatch(conn: sqlite3.Connection, member_id: str) -> NudgeC
     if not meal_fields_confirmed(payload):
         return None
 
-    carbs = payload.get("carbs_g")
-    if carbs is None or carbs < MEAL_CARB_THRESHOLD:
+    if payload.get("meal_profile") != "higher_carb":
         return None
 
-    meal_label = _get_meal_label(payload)
     return NudgeCandidate(
         nudge_type="meal_guidance",
         matched_reason="meal_goal_mismatch",
-        explanation_basis=f"{meal_label} logged {carbs}g carbs; goal is low_carb (<{MEAL_CARB_THRESHOLD}g)",
+        explanation_basis="Recent meal looked higher carb for a low-carb goal",
         confidence=0.86,
         escalation_recommended=False,
         source_signal_ids=[signal["id"]],
@@ -53,24 +50,9 @@ def check_meal_goal_mismatch(conn: sqlite3.Connection, member_id: str) -> NudgeC
     )
 
 
-def _get_meal_label(payload: dict) -> str:
-    meal_type = payload.get("meal_type")
-    if isinstance(meal_type, str):
-        normalized_meal_type = meal_type.strip().lower()
-        if normalized_meal_type:
-            return f"{normalized_meal_type.capitalize()} meal"
-
-    legacy_meal = payload.get("meal")
-    if isinstance(legacy_meal, str):
-        normalized_legacy_meal = legacy_meal.strip()
-        if normalized_legacy_meal:
-            return normalized_legacy_meal
-
-    return "Recent meal"
-
-
 def meal_fields_confirmed(payload: dict) -> bool:
-    return payload.get("photo_attached") is True and payload.get("analysis_source") in {"llm", "fallback"}
+    meal_profile = payload.get("meal_profile")
+    return isinstance(meal_profile, str) and bool(meal_profile.strip())
 
 
 def check_missing_weight_log(conn: sqlite3.Connection, member_id: str) -> NudgeCandidate | None:

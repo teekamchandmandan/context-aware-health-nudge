@@ -1,3 +1,4 @@
+import json
 from typing import Annotated
 
 from fastapi import APIRouter, Query
@@ -13,6 +14,21 @@ from app.models.coach import (
 router = APIRouter(prefix="/api/coach", tags=["coach"])
 
 
+def _extract_visible_food_summary(payload_json: str | None) -> str | None:
+    if not payload_json:
+        return None
+
+    try:
+        payload = json.loads(payload_json)
+    except (TypeError, ValueError):
+        return None
+
+    summary = payload.get("visible_food_summary")
+    if isinstance(summary, str) and summary.strip():
+        return summary.strip()
+    return None
+
+
 @router.get("/nudges")
 def get_coach_nudges(
     conn: DbDep,
@@ -23,6 +39,15 @@ def get_coach_nudges(
                   n.content, n.explanation, n.matched_reason, n.confidence,
                   n.escalation_recommended, n.status, n.phrasing_source,
                   n.created_at,
+                                    (
+                                            SELECT s.payload_json
+                                            FROM signals s
+                                            WHERE s.member_id = n.member_id
+                                                AND s.signal_type = 'meal_logged'
+                                                AND s.created_at <= n.created_at
+                                            ORDER BY s.created_at DESC
+                                            LIMIT 1
+                                    ) AS meal_payload_json,
                   la.action_type AS latest_action_type
            FROM nudges n
            JOIN members m ON n.member_id = m.id
@@ -42,6 +67,9 @@ def get_coach_nudges(
             member_id=row["member_id"],
             member_name=row["member_name"],
             nudge_type=row["nudge_type"],
+            visible_food_summary=_extract_visible_food_summary(row["meal_payload_json"])
+            if row["nudge_type"] == "meal_guidance"
+            else None,
             content=row["content"],
             explanation=row["explanation"],
             matched_reason=row["matched_reason"],

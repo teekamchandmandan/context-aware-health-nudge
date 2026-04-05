@@ -7,7 +7,7 @@ from .coach import (
     CoachNudgeItem,
     CoachNudgeListResponse,
 )
-from .meals import MealDraftResponse, MealLogInput
+from .meals import MealDraftResponse
 from .member import MemberNudgeResponse
 from .shared import ActionType, MemberRef, NudgeDetail, NudgeState, SignalType
 from .signals import SignalPayload, SignalRequest, SignalResponse
@@ -21,7 +21,6 @@ __all__ = [
     "CoachNudgeItem",
     "CoachNudgeListResponse",
     "MealDraftResponse",
-    "MealLogInput",
     "MemberNudgeResponse",
     "MemberRef",
     "NudgeDetail",

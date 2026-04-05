@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from importlib import import_module
+import sqlite3
 
 from fastapi import HTTPException, Request, UploadFile
-from pydantic import ValidationError
 
-from app.models.meals import MealDraftResponse, MealLogInput
+from app.models.meals import MealDraftResponse
 
 MAX_PHOTO_BYTES = 10 * 1024 * 1024  # 10 MB
 ALLOWED_MEAL_UPLOAD_FIELDS = frozenset({"photo"})
@@ -45,49 +45,29 @@ async def read_meal_photo(
     return data, photo_content_type or None
 
 
-def validate_meal_log_input(
-    *,
-    photo_attached: bool,
-) -> MealLogInput:
-    try:
-        return MealLogInput(
-            photo_attached=photo_attached,
-        )
-    except ValidationError as exc:
-        detail = exc.errors()[0].get("msg", "Invalid meal log")
-        raise HTTPException(status_code=422, detail=detail) from exc
-
-
 def create_meal_draft_response(
     *,
+    conn: sqlite3.Connection,
+    member_id: str,
     photo_bytes: bytes | None,
     photo_content_type: str | None,
 ) -> MealDraftResponse:
     return _get_create_meal_draft()(  # Preserve the historical patch target at app.main.create_meal_draft.
+        conn=conn,
+        member_id=member_id,
         photo_bytes=photo_bytes,
         photo_content_type=photo_content_type,
     )
 
 
 def build_meal_log_payload(
-    meal_input: MealLogInput,
     meal_analysis: MealDraftResponse,
 ) -> dict[str, object]:
     payload_dict: dict[str, object] = {
-        "photo_attached": meal_input.photo_attached,
-        "analysis_source": meal_analysis.analysis_source,
-        "analysis_status": meal_analysis.analysis_status,
+        "meal_profile": meal_analysis.meal_profile,
     }
 
-    if meal_analysis.meal_type:
-        payload_dict["meal_type"] = meal_analysis.meal_type
-    if meal_analysis.carbs_g is not None:
-        payload_dict["carbs_g"] = meal_analysis.carbs_g
-    if meal_analysis.protein_g is not None:
-        payload_dict["protein_g"] = meal_analysis.protein_g
-    if meal_analysis.analysis_summary:
-        payload_dict["analysis_summary"] = meal_analysis.analysis_summary
-    if meal_analysis.analysis_confidence is not None:
-        payload_dict["analysis_confidence"] = meal_analysis.analysis_confidence
+    if meal_analysis.visible_food_summary:
+        payload_dict["visible_food_summary"] = meal_analysis.visible_food_summary
 
     return payload_dict

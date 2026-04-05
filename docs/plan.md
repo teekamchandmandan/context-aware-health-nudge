@@ -2,7 +2,7 @@
 
 ## 1. Objective
 
-This project will deliver a focused end-to-end vertical slice. The slice should show a personalized nudge, explain why it appeared, handle confidence explicitly, escalate safely to a coach when needed, expose that activity in a coach view, and keep a clear audit trail. LLM usage is allowed only as a phrasing layer, never as the source of truth for decisioning.
+This project will deliver a focused end-to-end vertical slice. The slice should show a personalized nudge, explain why it appeared, handle confidence explicitly, escalate safely to a coach when needed, expose that activity in a coach view, and keep a clear audit trail. LLM usage stays bounded to copy phrasing and photo-based meal extraction, never as the source of truth for decisioning.
 
 Member profiles and baseline history may be seeded, but the visible nudge flow should still respond to fresh member-entered signals during the demo.
 
@@ -111,11 +111,11 @@ An existing active nudge is never superseded in this prototype. Reevaluation hap
 
 ### Default evaluator thresholds
 
-| Evaluator          | Default trigger                                                                                       | Confidence |
-| ------------------ | ----------------------------------------------------------------------------------------------------- | ---------- |
-| Meal goal mismatch | Member goal is `low_carb` and a meal in the last 24 hours has `carbs_g >= 60`                         | `0.86`     |
-| Missing weight log | No `weight_logged` signal in the last 4 full days                                                     | `0.68`     |
-| Support risk       | `mood_logged.mood` is `low` in the last 3 days and there are at least 2 dismissals in the last 7 days | `0.42`     |
+| Evaluator          | Default trigger                                                                                         | Confidence |
+| ------------------ | ------------------------------------------------------------------------------------------------------- | ---------- |
+| Meal goal mismatch | Member goal is `low_carb` and a meal in the last 24 hours is classified as `meal_profile = higher_carb` | `0.86`     |
+| Missing weight log | No `weight_logged` signal in the last 4 full days                                                       | `0.68`     |
+| Support risk       | `mood_logged.mood` is `low` in the last 3 days and there are at least 2 dismissals in the last 7 days   | `0.42`     |
 
 These are prototype defaults, not clinical logic. They exist to keep implementation concrete and reviewable.
 
@@ -126,20 +126,21 @@ The LLM is a visible part of the solution, but it stays tightly bounded.
 ### Separation of concerns
 
 - The rule engine decides whether a nudge should exist, what type it is, how confident the system is, and whether escalation is recommended.
-- The LLM only improves phrasing after that decision has already been made.
+- The phrasing prompt only rewrites already-approved member-visible copy from structured facts.
+- The meal-analysis prompt only extracts a cautious structured meal profile from the uploaded image and never decides whether a nudge should exist.
 
 ### Graceful degradation
 
-- If `OPENAI_API_KEY` is set, the system can use the LLM to generate phrasing.
-- If the key is missing, or if the LLM call fails or times out, the backend falls back to deterministic templates automatically.
+- If `OPENAI_API_KEY` is set, the system can use the LLM for phrasing and meal-photo analysis.
+- If the key is missing, or if a provider call fails or times out, phrasing falls back to deterministic templates and meal analysis falls back to a conservative `meal_profile = unclear` result.
 - The application must remain fully usable without an API key.
 
 ### Guardrails
 
-- The system prompt disallows diagnoses, medication guidance, and treatment claims.
-- Output length is capped.
-- Responses are validated against a lightweight blacklist before delivery.
-- Every LLM outcome is logged as either `llm_call` or `llm_fallback`.
+- Phrasing receives only short structured decision context and is not allowed to add new health claims, diagnosis language, medication guidance, or treatment suggestions.
+- Meal analysis receives only the photo input, returns a tightly validated JSON object with `meal_profile` and optional `visible_food_summary`, and must prefer `meal_profile = "unclear"` over unsupported guesses.
+- Output length is capped and provider JSON is validated before persistence.
+- Every LLM outcome is logged as either `llm_call` or `llm_fallback`, including `prompt_area` and `model_name`.
 
 ## 8. Data Model
 
@@ -210,6 +211,7 @@ The coach view should make it easy to see what the system has done and where hum
 The system should persist a clear audit trail for the key events in the workflow.
 
 - Persisted audit events include `nudge_generated`, `user_action`, `escalation_created`, `llm_call`, and `llm_fallback`.
+- LLM audit rows should capture `prompt_area` and `model_name`, and `nudge_generated` should carry `llm_model_name` when phrasing was upgraded by the LLM.
 - Structured backend logs should capture member ID, nudge ID, confidence, matched reason, escalation decision, and whether final phrasing came from a template or the LLM.
 
 The seed dataset should give a reviewer believable starting context while still leaving the visible product interactions to live signal capture where possible:

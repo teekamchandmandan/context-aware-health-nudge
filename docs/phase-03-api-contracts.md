@@ -131,7 +131,7 @@ Use a dedicated one-step meal logging endpoint for the member meal flow so photo
 - Require a meal photo for every one-step meal log.
 - Reject unexpected multipart form fields such as `description` with `422`.
 - Run backend meal analysis synchronously, persist the final `meal_logged` signal, and return the stored signal payload.
-- The saved payload may include inferred `meal_type`, `carbs_g`, `protein_g`, a short `analysis_summary`, and an `analysis_source` of `llm` or `fallback`.
+- The saved payload should include a coarse inferred `meal_profile`, and may include an optional `visible_food_summary` describing visible food items.
 - Meal photos are transient analysis inputs only in this assignment build. Add a production note that a real product may persist uploaded photos for later member review.
 - If provider analysis fails, still save the meal with the uploaded photo and any deterministic fallback output instead of blocking the member flow.
 
@@ -174,7 +174,7 @@ Use a dedicated one-step meal logging endpoint for the member meal flow so photo
 - Make active nudge retrieval idempotent from the API boundary, not just inside the engine.
 - Keep action handling strict so invalid transitions fail clearly.
 - Preserve enough response detail that frontend branches do not need extra endpoints.
-- Keep signal intake simple; for the prototype, meal photo handling can stay ephemeral inside the one-step meal logging request and the final saved signal can record only `photo_attached` plus the extracted summary fields.
+- Keep signal intake simple; for the prototype, meal photo handling can stay ephemeral inside the one-step meal logging request and the final saved signal can record only the extracted meal profile fields.
 - Add simple filtering or ordering only if it does not complicate the API surface materially.
 - Repeated `GET /nudge` calls should return the same active nudge until it reaches a terminal state.
 

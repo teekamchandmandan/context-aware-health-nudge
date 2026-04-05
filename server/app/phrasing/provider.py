@@ -7,19 +7,21 @@ from app.core.config import OPENAI_MODEL, PHRASING_TIMEOUT_SECONDS
 from .models import PhrasingRequest
 
 SYSTEM_PROMPT = (
-    "You are rewriting a short wellness nudge for clarity and empathy. "
-    "Do not diagnose, prescribe, mention medication, or imply treatment. "
-    "Keep the recommendation practical, non-judgmental, and comfortably under the requested length. "
-    "The explanation must state why the member is seeing the nudge, not describe your writing choices. "
-    "Use one short sentence for content and one short sentence for explanation. "
-    "Return only JSON with content and explanation."
+    "You rewrite an already approved wellness nudge using only the structured facts you are given. "
+    "Do not change the underlying decision, add new facts, add new risks, or add medical framing. "
+    "Do not diagnose, prescribe, mention medication, recommend clinicians, or imply treatment. "
+    "Return exactly one JSON object with only content and explanation. "
+    "Content must be one short member-facing sentence with a practical next step. "
+    "Explanation must be one short sentence explaining why the member is seeing the nudge using only the supplied reason. "
+    "Keep both fields concrete, non-judgmental, and within the requested character limits. "
+    "Do not mention tone, writing style, JSON, validation, or character counts."
 )
 
 
-def request_llm_json(request_model: PhrasingRequest, api_key: str) -> str:
+def request_llm_json(request_model: PhrasingRequest, api_key: str) -> tuple[str, str]:
     payload = {
         "model": OPENAI_MODEL,
-        "temperature": 0.2,
+        "temperature": 0.1,
         "response_format": {"type": "json_object"},
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -35,10 +37,12 @@ def request_llm_json(request_model: PhrasingRequest, api_key: str) -> str:
                         "max_content_chars": request_model.max_content_chars,
                         "max_explanation_chars": request_model.max_explanation_chars,
                         "instructions": [
-                            "Content should be a direct member-facing recommendation.",
-                            "Explanation should say why the member is seeing the nudge.",
-                            "Do not mention tone, clarity, writing, or character limits.",
-                            "Keep both fields concise and well below the validator maximum.",
+                            "Use only the structured request fields. Do not invent extra facts, meal details, numbers, or time windows.",
+                            "Content should be a direct member-facing recommendation with one practical next step.",
+                            "Explanation should restate why the member is seeing the nudge and stay grounded in explanation_basis.",
+                            "If the tone is gentle, soften the wording without becoming vague; if the tone is clear, be direct but still kind.",
+                            "Avoid exclamation points, shame, warnings, absolutes, and any mention of tone, writing, or character limits.",
+                            "Keep each field to one sentence and at or below the requested character limits.",
                         ],
                     }
                 ),
@@ -58,7 +62,7 @@ def request_llm_json(request_model: PhrasingRequest, api_key: str) -> str:
         response.raise_for_status()
         body = response.json()
 
-    return extract_message_content(body)
+    return extract_message_content(body), extract_model_name(body)
 
 
 def extract_message_content(body: dict) -> str:
@@ -83,6 +87,13 @@ def extract_message_content(body: dict) -> str:
             return strip_code_fences("".join(text_parts))
 
     raise ValueError("provider returned unsupported content")
+
+
+def extract_model_name(body: dict) -> str:
+    model_name = body.get("model")
+    if isinstance(model_name, str) and model_name.strip():
+        return model_name.strip()
+    return OPENAI_MODEL
 
 
 def strip_code_fences(text: str) -> str:

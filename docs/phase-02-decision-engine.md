@@ -42,11 +42,11 @@ The assignment is easier to trust if nudge creation is explainable before any AP
 
 ## Default Evaluator Rules
 
-| Evaluator                  | Trigger                                                                                            | Candidate type    | Default confidence |
-| -------------------------- | -------------------------------------------------------------------------------------------------- | ----------------- | ------------------ |
-| `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent meal in the last 24 hours has `carbs_g >= 60`        | `meal_guidance`   | `0.86`             |
-| `check_missing_weight_log` | No `weight_logged` signal in the last 4 full UTC days                                              | `weight_check_in` | `0.68`             |
-| `check_support_risk`       | `mood_logged.mood == "low"` in the last 3 days and at least 2 `dismiss` actions in the last 7 days | `support_risk`    | `0.42`             |
+| Evaluator                  | Trigger                                                                                                  | Candidate type    | Default confidence |
+| -------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------- | ------------------ |
+| `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent meal in the last 24 hours has `meal_profile = higher_carb` | `meal_guidance`   | `0.86`             |
+| `check_missing_weight_log` | No `weight_logged` signal in the last 4 full UTC days                                                    | `weight_check_in` | `0.68`             |
+| `check_support_risk`       | `mood_logged.mood == "low"` in the last 3 days and at least 2 `dismiss` actions in the last 7 days       | `support_risk`    | `0.42`             |
 
 These constants are implementation defaults for the prototype. If they change later, update this file and `docs/plan.md` together.
 

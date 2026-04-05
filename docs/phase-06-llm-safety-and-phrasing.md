@@ -39,6 +39,7 @@ The assignment allows LLM usage, but the implementation should show restraint. T
 - Template-based fallback phrasing for each nudge type.
 - Prompt instructions that forbid diagnosis, medication advice, and treatment claims.
 - Timeout and failure handling that never blocks the product flow.
+- Model-aware logging that records which provider model handled each phrasing or meal-analysis attempt.
 
 ## Default Templates
 
@@ -54,17 +55,22 @@ The assignment allows LLM usage, but the implementation should show restraint. T
 
 ## Prompt Boundary
 
-The prompt should receive only the already-decided nudge type, member goal, short matched reason, and desired tone. Do not send raw signal history, raw image data, or other free-form member input unless they are first reduced to a short structured summary.
+The phrasing prompt should receive only the already-decided nudge type, member goal, short matched reason, short explanation basis, and desired tone. Do not send raw signal history, raw image data, or other free-form member input unless they are first reduced to a short structured summary.
 
-The meal-analysis feature should stay outside the phrasing step: the meal-analysis request may use raw image input to produce structured meal fields, but the phrasing prompt should still receive only the structured meal details already saved on the signal.
+The meal-analysis feature should stay outside the phrasing step: the meal-analysis request may use raw image input to produce a structured meal profile, but the phrasing prompt should still receive only the structured meal details already saved on the signal.
+
+Prompt expectations:
+
+- Phrasing must return exactly one JSON object with only `content` and `explanation`.
+- Phrasing may rewrite wording, but it may not add new health reasoning, diagnoses, warnings, or facts not present in the structured input.
+- Meal analysis must return exactly one JSON object with only `meal_profile` and optional `visible_food_summary`, and should prefer `meal_profile = "unclear"` when visual evidence is weak.
 
 Suggested system prompt shape:
 
 ```text
-You are rewriting a short wellness nudge for clarity and empathy.
-Do not diagnose, prescribe, mention medication, or imply treatment.
-Keep the recommendation practical, non-judgmental, and under the requested length.
-Return only JSON with content and explanation.
+You rewrite an already approved wellness nudge using only the structured facts you are given.
+Do not change the underlying decision, add new risks, or add medical framing.
+Return exactly one JSON object with only content and explanation.
 ```
 
 ## Validation Rules
@@ -72,7 +78,7 @@ Return only JSON with content and explanation.
 - Request timeout: 3 seconds.
 - Reject output if `content` exceeds 160 characters.
 - Reject output if `explanation` exceeds 160 characters.
-- Reject output containing blocked terms such as `diagnose`, `diagnosis`, `medication`, `prescription`, `dose`, or `treatment plan`.
+- Reject output containing blocked terms such as `diagnose`, `diagnosis`, `medication`, `prescription`, `dose`, `treatment plan`, `medical advice`, `doctor`, `clinician`, or `therapy`.
 - On any validation or provider failure, return deterministic templates.
 
 ## Safety Requirements
@@ -80,10 +86,11 @@ Return only JSON with content and explanation.
 - The LLM receives only the minimum structured context needed for phrasing.
 - Output must stay short, practical, and non-diagnostic.
 - The photo-only meal flow must degrade cleanly to deterministic structured inputs without blocking the member experience.
-- Detailed meal explanations should only reference meal type or macro values that were persisted on the saved meal signal.
+- Detailed meal explanations should only reference the persisted `meal_profile` and any optional `visible_food_summary` that was saved from the meal signal.
 - Any failed validation should route to deterministic templates.
 - The system should remain fully usable without an API key.
 - The phrasing source should be visible to backend logs and audit events as `template` or `llm`.
+- LLM audit events should record `prompt_area` and `model_name` so phrasing and meal-analysis calls can be reviewed separately.
 - Support-risk escalations should remain deterministic and should not introduce member-visible LLM phrasing.
 
 ## Implementation Notes

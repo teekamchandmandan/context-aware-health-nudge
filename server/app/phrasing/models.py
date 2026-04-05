@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 BLOCKED_TERMS = (
     "diagnose",
@@ -9,6 +9,13 @@ BLOCKED_TERMS = (
     "prescription",
     "dose",
     "treatment plan",
+    "medical advice",
+    "doctor",
+    "clinician",
+    "therapy",
+    "therapist",
+    "cure",
+    "remedy",
 )
 
 
@@ -21,6 +28,8 @@ class FallbackReason(str, Enum):
 
 
 class PhrasingRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     nudge_type: str
     member_goal: str
     matched_reason: str
@@ -31,6 +40,8 @@ class PhrasingRequest(BaseModel):
 
 
 class PhrasingOutput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     content: str = Field(min_length=1, max_length=160)
     explanation: str = Field(min_length=1, max_length=160)
 
