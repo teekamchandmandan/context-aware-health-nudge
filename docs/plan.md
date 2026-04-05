@@ -80,11 +80,11 @@ The app is a local-first prototype with a thin app assembly layer and explicit p
 
 The current engine uses three explicit evaluators.
 
-| Evaluator                  | Trigger                                                                                                                  | Confidence | Outcome                        |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------- | ------------------------------ |
-| `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent `meal_logged` signal in the last 24 hours has `meal_profile = higher_carb` | `0.86`     | Active `meal_guidance` nudge   |
-| `check_missing_weight_log` | No `weight_logged` signal in the last 4 days                                                                             | `0.68`     | Active `weight_check_in` nudge |
-| `check_support_risk`       | Most recent mood in the last 3 days is `low` and there have been at least 2 dismissals in the last 7 days                | `0.42`     | Escalated `support_risk` path  |
+| Evaluator                  | Trigger                                                                                                                  | Confidence (computed)                                                                                                             | Outcome                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent `meal_logged` signal in the last 24 hours has `meal_profile = higher_carb` | `round(0.65 + 0.28 * freshness, 2)` where `freshness = max(0, 1 - hours_since / 24)`. Range: `0.65`-`0.93`.                      | Active `meal_guidance` nudge   |
+| `check_missing_weight_log` | No `weight_logged` signal in the last 4 days                                                                             | `round(0.56 + 0.16 * overdue_factor, 2)` where `overdue_factor = min(1, (days_since - 4) / 4)`. Range: `0.56`-`0.72`.            | Active `weight_check_in` nudge |
+| `check_support_risk`       | Most recent mood in the last 3 days is `low` and there have been at least 2 dismissals in the last 7 days                | `round(0.42 + (dismiss_count - 2) * 0.06, 2)`. Range: `0.42`+ per extra dismissal (coach-visible; always escalated via flag).    | Escalated `support_risk` path  |
 
 Operating rules:
 
