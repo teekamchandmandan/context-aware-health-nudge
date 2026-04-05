@@ -38,6 +38,26 @@ Logging a meal, weight, or mood entry in the member view immediately re-evaluate
 
 _(See `.env.example` in `server/` and `client/` for available environment overrides, such as port configurations and timeouts)._
 
+## Screenshots
+
+**Member view — meal guidance nudge (Alice Chen)**
+
+A deterministic rule evaluates Alice's higher-carb meal against her low-carb goal and surfaces an actionable nudge with three response options.
+
+![Member view showing a meal guidance nudge for Alice Chen](docs/screenshots/member-alice-meal-guidance.png)
+
+**Member view — support escalation state (Carol Davis)**
+
+When the rule engine crosses the escalation threshold, the member sees a supportive holding state instead of further automated nudges while a coach reviews the case.
+
+![Member view showing the support escalation state for Carol Davis](docs/screenshots/member-carol-support-status.png)
+
+**Coach dashboard**
+
+The coach view lists open escalations and a full nudge history with status badges (Active, Escalated, Acted, Dismissed) so reviewers can see what the system surfaced and what members did with it.
+
+![Coach dashboard showing escalations and recent nudge history](docs/screenshots/coach-dashboard.png)
+
 ## Architecture
 
 ```mermaid
