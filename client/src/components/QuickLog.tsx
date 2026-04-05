@@ -80,7 +80,9 @@ export default function QuickLog({ memberId, onSignalSubmitted }: Props) {
           eyebrow='Weight'
           title='Track your weight'
           subtitle={lastLoggedText(
-            `${lastWeight?.payload?.weight_lb} lb`,
+            lastWeight?.payload?.weight_lb != null
+              ? `${lastWeight.payload.weight_lb} lb`
+              : '',
             lastWeight?.logged_at,
           )}
           apiError={weight.apiError}
@@ -92,7 +94,9 @@ export default function QuickLog({ memberId, onSignalSubmitted }: Props) {
           eyebrow='Sleep'
           title='How many hours?'
           subtitle={lastLoggedText(
-            `${lastSleep?.payload?.sleep_hours}h`,
+            lastSleep?.payload?.sleep_hours != null
+              ? `${lastSleep.payload.sleep_hours}h`
+              : '',
             lastSleep?.logged_at,
           )}
           apiError={sleep.apiError}
@@ -105,7 +109,9 @@ export default function QuickLog({ memberId, onSignalSubmitted }: Props) {
           title='How are you feeling?'
           subtitle={lastLoggedText(
             lastMood?.payload?.mood
-              ? (MOOD_LABELS[lastMood.payload.mood] ?? lastMood.payload.mood).toLowerCase()
+              ? (
+                  MOOD_LABELS[lastMood.payload.mood] ?? lastMood.payload.mood
+                ).toLowerCase()
               : '',
             lastMood?.logged_at,
           )}
