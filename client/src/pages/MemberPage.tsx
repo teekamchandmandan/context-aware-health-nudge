@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { fetchNudge, ApiError } from '../api/client';
 import type { MemberNudgeResponse, NudgeState } from '../types/member';
@@ -31,26 +31,32 @@ export default function MemberPage() {
   const [data, setData] = useState<MemberNudgeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const loadNudge = useCallback(async (id: string) => {
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchNudge(id);
-      setData(res);
+      const res = await fetchNudge(id, ac.signal);
+      if (!ac.signal.aborted) setData(res);
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       if (err instanceof ApiError && err.status === 404) {
         console.error('Member nudge endpoint returned 404', err.body);
       }
 
       setError('We could not load this right now. Please try again.');
     } finally {
-      setLoading(false);
+      if (!ac.signal.aborted) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     loadNudge(memberId);
+    return () => abortRef.current?.abort();
   }, [memberId, loadNudge]);
 
   function handleMemberChange() {
@@ -65,20 +71,25 @@ export default function MemberPage() {
 
   /* Silent refresh: update data without flashing the loading spinner. */
   const silentRefetch = useCallback(async () => {
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
     try {
-      const res = await fetchNudge(memberId);
-      setData(res);
+      const res = await fetchNudge(memberId, ac.signal);
+      if (!ac.signal.aborted) setData(res);
     } catch {
       /* swallow — nudge section keeps its previous state */
+    } finally {
+      if (!ac.signal.aborted) setLoading(false);
     }
   }, [memberId]);
 
-  const state: NudgeState = data?.state ?? 'active';
+  const state: NudgeState | null = data?.state ?? null;
   const currentMember =
     SEEDED_MEMBERS.find((member) => member.id === memberId) ??
     SEEDED_MEMBERS[0];
   const memberName = data?.member.name ?? currentMember.name;
-  const stateCopy = STATE_COPY[state];
+  const stateCopy = state ? STATE_COPY[state] : null;
   const lastUpdatedLabel = data?.nudge?.created_at
     ? formatTimestamp(data.nudge.created_at)
     : loading
@@ -166,7 +177,7 @@ export default function MemberPage() {
             Hi {memberName}
           </h1>
           <p className='mt-3 max-w-2xl text-base leading-8 text-[var(--color-muted)] sm:text-lg'>
-            {stateCopy.description}
+            {stateCopy?.description ?? '\u00A0'}
           </p>
           {lastUpdatedLabel && (
             <p className='mt-4 text-sm text-[var(--color-muted)]'>

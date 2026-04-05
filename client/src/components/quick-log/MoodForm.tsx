@@ -43,6 +43,7 @@ export default function MoodForm({
     setSubmitting(true);
     try {
       await postSignal(memberId, 'mood_logged', { mood });
+      setMood(null);
       onSuccess(
         `Mood logged as ${MOOD_LABELS[mood].toLowerCase()} — thanks for checking in!`,
       );

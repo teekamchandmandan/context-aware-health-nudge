@@ -33,7 +33,12 @@ def post_nudge_action(
         "ask_for_help": "escalated",
     }[action_type]
 
-    conn.execute("UPDATE nudges SET status = ? WHERE id = ?", (new_status, nudge_id))
+    cursor = conn.execute(
+        "UPDATE nudges SET status = ? WHERE id = ? AND status NOT IN ('acted', 'dismissed', 'escalated', 'superseded')",
+        (new_status, nudge_id),
+    )
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=409, detail="Nudge is already in a terminal state")
 
     action_id = uuid4().hex
     now = utc_timestamp()

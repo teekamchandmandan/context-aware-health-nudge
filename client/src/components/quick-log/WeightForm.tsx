@@ -43,6 +43,7 @@ export default function WeightForm({
     setSubmitting(true);
     try {
       await postSignal(memberId, 'weight_logged', { weight_lb: weightLb });
+      setWeight('');
       onSuccess(`${parsedWeight} ${unit} logged — nice work staying on track!`);
     } catch (error) {
       if (error instanceof ApiError && error.status === 422) {

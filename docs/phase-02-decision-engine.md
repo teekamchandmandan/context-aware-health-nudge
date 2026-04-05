@@ -44,7 +44,7 @@ The assignment is easier to trust if nudge creation is explainable before any AP
 
 | Evaluator                  | Trigger                                                                                                  | Candidate type    | Default confidence                |
 | -------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------- |
-| `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent meal in the last 24 hours has `meal_profile = higher_carb` | `meal_guidance`   | `0.70` base (computed 0.62–0.90)  |
+| `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent meal in the last 24 hours has `meal_profile = higher_carb` | `meal_guidance`   | `0.70` base (computed 0.78–0.90)  |
 | `check_missing_weight_log` | No `weight_logged` signal in the last 4 full UTC days                                                    | `weight_check_in` | `0.50` base (computed 0.50–0.76)  |
 | `check_support_risk`       | `mood_logged.mood == "low"` in the last 3 days and at least 2 `dismiss` actions in the last 7 days       | `support_risk`    | `0.25` base (hard-capped at 0.48) |
 

@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from datetime import datetime
 
 from .common import (
     DISMISS_LOOKBACK_DAYS,
@@ -81,7 +82,6 @@ def check_missing_weight_log(conn: sqlite3.Connection, member_id: str) -> NudgeC
         (member_id,),
     ).fetchone()
     if last_weight:
-        from datetime import datetime, timezone
         last_dt = datetime.fromisoformat(last_weight["created_at"].replace("Z", "+00:00"))
         days_since = (_now() - last_dt).total_seconds() / 86400
     else:

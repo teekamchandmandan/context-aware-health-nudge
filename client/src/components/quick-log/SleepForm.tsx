@@ -35,6 +35,7 @@ export default function SleepForm({
     setSubmitting(true);
     try {
       await postSignal(memberId, 'sleep_logged', { sleep_hours: parsedHours });
+      setHours('');
       onSuccess(
         `${parsedHours}h logged — sleep tracking helps us personalise your plan.`,
       );

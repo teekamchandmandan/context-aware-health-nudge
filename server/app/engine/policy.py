@@ -81,6 +81,6 @@ def select_nudge(conn: sqlite3.Connection, member_id: str) -> NudgeCandidate | N
     if not candidates:
         return None
 
-    candidates.sort(key=lambda candidate: candidate.latest_signal_ts, reverse=True)
+    candidates.sort(key=lambda candidate: candidate.latest_signal_ts or "", reverse=True)
     candidates.sort(key=lambda candidate: (candidate.priority, -candidate.confidence))
     return candidates[0]

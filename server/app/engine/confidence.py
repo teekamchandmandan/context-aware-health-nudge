@@ -5,16 +5,11 @@ rule type, then applies bounded adjustments from observable evidence: recency,
 classification clarity, overdue severity, member engagement, and dismissal
 patterns.  Every adjustment is recorded as a named factor so coaches and auditors
 can inspect *why* a score landed where it did.
-
-Score version is stamped on every result so older nudges remain interpretable
-when scoring logic evolves.
 """
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
-
-SCORE_VERSION = "v1"
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +138,7 @@ def score_support_risk(
     Factors:
       base           0.25  — conservative starting point
       mood_recency   up to +0.12, decaying over the mood lookback window
-      dismiss_pattern up to +0.10, based on recent dismissal count
+      dismiss_pattern up to +0.12, based on recent dismissal count
     """
     factors: list[dict] = []
 
@@ -161,7 +156,7 @@ def score_support_risk(
     factors.append({"name": "mood_recency", "value": mood_value, "label": mood_label})
 
     dismiss_min = 2
-    dismiss_max_bonus = 0.10
+    dismiss_max_bonus = 0.12
     extra = max(0, dismiss_count - dismiss_min)
     dismiss_value = round(min(dismiss_max_bonus, 0.04 + extra * 0.03), 2)
     factors.append({

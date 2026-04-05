@@ -1,6 +1,6 @@
 # Context-Aware Health Nudge
 
-A local prototype for rule-based member nudges, coach escalation, and reviewable decisioning.
+A proactive health coaching prototype that delivers personalized nudges, escalates higher-risk moments to a coach, and keeps every decision reviewable.
 
 ## Quick Start
 

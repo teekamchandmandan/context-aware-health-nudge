@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ToastItem } from './Toast.shared';
 
 function ToastBubble({
@@ -9,6 +9,8 @@ function ToastBubble({
   onDone: () => void;
 }) {
   const [visible, setVisible] = useState(false);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
   useEffect(() => {
     // trigger enter animation on next frame
@@ -17,7 +19,7 @@ function ToastBubble({
     const timer = setTimeout(() => {
       setVisible(false);
       // wait for exit animation before removing
-      exitTimer = setTimeout(onDone, 300);
+      exitTimer = setTimeout(() => onDoneRef.current(), 300);
     }, 3000);
     return () => {
       cancelAnimationFrame(raf);
@@ -26,7 +28,7 @@ function ToastBubble({
         clearTimeout(exitTimer);
       }
     };
-  }, [onDone]);
+  }, []);
 
   return (
     <div
