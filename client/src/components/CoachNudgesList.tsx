@@ -6,7 +6,10 @@ interface Props {
   items: CoachNudgeItem[];
 }
 
-function confidenceBand(c: number | null): {
+function confidenceBand(
+  c: number | null,
+  nudgeType?: string,
+): {
   label: string;
   className: string;
 } {
@@ -15,18 +18,27 @@ function confidenceBand(c: number | null): {
       label: '—',
       className: 'bg-[var(--color-surface-soft)] text-[var(--color-muted)]',
     };
+
+  const pct = `${(c * 100).toFixed(0)}%`;
+  const isSafetyPath = nudgeType === 'support_risk';
+
+  if (isSafetyPath)
+    return {
+      label: `Review · ${pct}`,
+      className: 'bg-[rgba(255,209,102,0.25)] text-[var(--color-warning-text)]',
+    };
   if (c >= 0.75)
     return {
-      label: `${(c * 100).toFixed(0)}%`,
+      label: `High · ${pct}`,
       className: 'bg-[rgba(143,246,208,0.22)] text-[var(--color-accent)]',
     };
   if (c >= 0.5)
     return {
-      label: `${(c * 100).toFixed(0)}%`,
+      label: `Moderate · ${pct}`,
       className: 'bg-[rgba(255,209,102,0.25)] text-[var(--color-warning-text)]',
     };
   return {
-    label: `${(c * 100).toFixed(0)}%`,
+    label: `Low · ${pct}`,
     className: 'bg-[rgba(186,26,26,0.08)] text-[var(--color-error)]',
   };
 }
@@ -102,7 +114,7 @@ export default function CoachNudgesList({ items }: Props) {
   return (
     <ul className='space-y-3'>
       {items.map((n) => {
-        const band = confidenceBand(n.confidence);
+        const band = confidenceBand(n.confidence, n.nudge_type);
         const isExpanded = expanded === n.nudge_id;
         const actionInfo = n.latest_action
           ? ACTION_LABELS[n.latest_action]
@@ -225,37 +237,76 @@ export default function CoachNudgesList({ items }: Props) {
                       </div>
                     </section>
 
-                    {n.confidence_factors && n.confidence_factors.length > 0 && (
-                      <section className='rounded-[1.35rem] border border-[rgba(190,200,200,0.45)] bg-white/72 p-4'>
-                        <p className='text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]'>
-                          Confidence breakdown
-                        </p>
-                        <ul className='mt-3 space-y-1.5'>
-                          {n.confidence_factors.map((f) => (
-                            <li
-                              key={f.name}
-                              className='flex items-center justify-between text-xs'
-                            >
-                              <span className='text-[var(--color-text)]'>
-                                {f.label}
+                    {n.confidence_factors &&
+                      n.confidence_factors.length > 0 && (
+                        <section className='rounded-[1.35rem] border border-[rgba(190,200,200,0.45)] bg-white/72 p-4'>
+                          <p className='text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]'>
+                            Confidence breakdown
+                          </p>
+                          {n.confidence_summary && (
+                            <p className='mt-2 text-sm leading-6 text-[var(--color-text)] italic'>
+                              {n.confidence_summary}
+                            </p>
+                          )}
+                          <ul className='mt-3 space-y-2'>
+                            {n.confidence_factors.map((f) => {
+                              const absPct = Math.round(
+                                Math.abs(f.value) * 100,
+                              );
+                              return (
+                                <li key={f.name}>
+                                  <div className='flex items-center justify-between text-xs'>
+                                    <span className='text-[var(--color-text)]'>
+                                      {f.label}
+                                    </span>
+                                    <span
+                                      className={`ml-2 shrink-0 font-mono font-semibold ${
+                                        f.value > 0
+                                          ? 'text-[var(--color-accent)]'
+                                          : f.value < 0
+                                            ? 'text-[var(--color-error)]'
+                                            : 'text-[var(--color-muted)]'
+                                      }`}
+                                    >
+                                      {f.value > 0 ? '+' : ''}
+                                      {Math.round(f.value * 100)}%
+                                    </span>
+                                  </div>
+                                  <div className='mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-soft)]'>
+                                    <div
+                                      className={`h-full rounded-full transition-all ${
+                                        f.value > 0
+                                          ? 'bg-[var(--color-accent)]'
+                                          : f.value < 0
+                                            ? 'bg-[var(--color-error)]'
+                                            : 'bg-[var(--color-muted)]'
+                                      }`}
+                                      style={{
+                                        width: `${Math.min(absPct, 100)}%`,
+                                      }}
+                                    />
+                                  </div>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                          {n.confidence !== null && (
+                            <div className='mt-3 flex items-center justify-between border-t border-[rgba(190,200,200,0.25)] pt-2 text-xs font-semibold'>
+                              <span className='text-[var(--color-muted)]'>
+                                Total
                               </span>
                               <span
-                                className={`ml-2 shrink-0 font-mono font-semibold ${
-                                  f.value > 0
-                                    ? 'text-[var(--color-accent)]'
-                                    : f.value < 0
-                                      ? 'text-[var(--color-error)]'
-                                      : 'text-[var(--color-muted)]'
-                                }`}
+                                className={
+                                  band.className.replace(/bg-\[.*?\]\s*/, '') +
+                                  ' font-mono'
+                                }
                               >
-                                {f.value > 0 ? '+' : ''}
-                                {f.value.toFixed(2)}
+                                {Math.round(n.confidence * 100)}%
                               </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </section>
-                    )}
+                            </div>
+                          )}
+                        </section>
+                      )}
                   </div>
                 </div>
 

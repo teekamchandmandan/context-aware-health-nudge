@@ -21,6 +21,7 @@ The assignment is easier to trust if nudge creation is explainable before any AP
 - Implement `check_meal_goal_mismatch`.
 - Implement `check_missing_weight_log`.
 - Implement `check_support_risk`.
+- Implement `check_repeated_low_mood`.
 - Evaluate all candidates for a member and choose a single best outcome.
 - Apply confidence tiers: high, medium, and low.
 - Enforce fatigue rules: no duplicate active nudge, cooldown by nudge type, and daily cap.
@@ -47,6 +48,9 @@ The assignment is easier to trust if nudge creation is explainable before any AP
 | `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent meal in the last 24 hours has `meal_profile = higher_carb` | `meal_guidance`   | `0.70` base (computed 0.78–0.90)  |
 | `check_missing_weight_log` | No `weight_logged` signal in the last 4 full UTC days                                                    | `weight_check_in` | `0.50` base (computed 0.50–0.76)  |
 | `check_support_risk`       | `mood_logged.mood == "low"` in the last 3 days and at least 2 `dismiss` actions in the last 7 days       | `support_risk`    | `0.25` base (hard-capped at 0.48) |
+| `check_repeated_low_mood`  | 3 or more `mood_logged` signals with `mood = low` in the last 3 days, independent of dismiss history     | `support_risk`    | `0.25` base (hard-capped at 0.48) |
+
+`check_support_risk` and `check_repeated_low_mood` both produce `support_risk` candidates and share the same escalation path, priority, and fatigue exemption. They differ by `matched_reason` (`support_risk` vs `repeated_low_mood`) so coaches can distinguish the trigger. Both can fire for the same member; the policy layer picks the higher-confidence candidate.
 
 These base values are starting points. Computed confidence applies evidence-weighted adjustments (recency, classification clarity, overdue severity, member engagement, and dismissal patterns) documented in `server/app/engine/confidence.py`. Each adjustment is recorded as a named factor for auditability. If base values change, update this file and `docs/plan.md` together.
 
@@ -92,7 +96,7 @@ Each evaluator should return either `None` or a candidate with these fields:
 ## Recommended Work Breakdown
 
 1. Define the candidate structure returned by each evaluator.
-2. Implement the three evaluator functions against seeded signals and member goals.
+2. Implement the four evaluator functions against seeded signals and member goals.
 3. Add prioritization and tie-breaking rules.
 4. Add fatigue and deduplication logic.
 5. Add escalation behavior for low-confidence and risk-support cases.

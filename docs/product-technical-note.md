@@ -4,11 +4,12 @@
 
 This prototype implements an event-driven feature where recent member signals drive a contextual next step—before the member has to interpret their own history or a coach has to manually inspect raw events.
 
-It focuses on three concrete cases:
+It focuses on four concrete cases:
 
 - A member on a low-carb program logs a higher-carb meal and gets a dinner suggestion while the meal is still recent.
 - A member stops logging weight for several days and gets a check-in reminder.
 - A member reports low mood after repeatedly dismissing nudges and is escalated to a coach instead of receiving another automated message.
+- A member logs low mood three or more times in a short window and is escalated to a coach based on the pattern alone, even without any dismissed nudges.
 
 The design focuses on presenting just one current recommendation, explaining why it appeared, and giving the member a clear choice to act, dismiss, or ask for help.
 
@@ -26,11 +27,12 @@ This note assumes a narrow, local prototype rather than a production health plat
 
 ## System Model
 
-The runtime model uses straightforward evaluation logic. Member inputs are stored as signals. The engine checks those signals against three deterministic rules. If more than one rule matches, the system picks one current state based on priority. Non-urgent nudges respect a 24-hour cooldown per nudge type and a daily cap of 2 auto-delivered nudges. The support-risk path bypasses those limits because a possible need for human follow-up matters more than avoiding one extra prompt.
+The runtime model uses straightforward evaluation logic. Member inputs are stored as signals. The engine checks those signals against four deterministic rules. If more than one rule matches, the system picks one current state based on priority. Non-urgent nudges respect a 24-hour cooldown per nudge type and a daily cap of 2 auto-delivered nudges. The support-risk path bypasses those limits because a possible need for human follow-up matters more than avoiding one extra prompt.
 
 - **Meal guidance.** Triggered when a member whose active plan specifies a low-carb diet logs a recent meal that is classified as higher carb. The system responds with an active nudge for the next meal.
 - **Weight check-in.** Triggered when a member has not logged weight in the last 4 days. The system responds with an active reminder.
-- **Support risk.** Triggered when a member reports low mood and has dismissed at least 2 nudges in the last 7 days. The system responds with an escalated state for coach review instead of another automated nudge.
+- **Support risk (dismiss-based).** Triggered when a member reports low mood and has dismissed at least 2 nudges in the last 7 days. The system responds with an escalated state for coach review instead of another automated nudge.
+- **Support risk (repeated low mood).** Triggered when a member logs low mood 3 or more times within the last 3 days, independent of dismiss history. The system escalates to a coach based on the mood pattern alone.
 
 Confidence is computed from observable factors rather than assigned by hand. Meal guidance gets stronger when the meal is recent and clearly classified. Weight check-in starts lower because absence of data is a weaker signal, then rises as the member becomes more overdue. Support risk stays below the automation threshold by design, so it always routes to coach review rather than acting like a high-confidence automated recommendation.
 
@@ -75,7 +77,7 @@ In the current repo, a few of these metrics are partially visible now: act-on ra
 
 **Risk:** The support-risk evaluator flags a member for coach review when no real concern exists, wasting coach attention and potentially alarming the member.
 
-**Mitigation:** The escalation rule is deliberately conservative. It requires both a low-mood signal within 3 days and at least 2 dismissed nudges within 7 days. The member-facing message simply says that the care team has been notified. The coach view shows the matched reason and confidence score for quick triage.
+**Mitigation:** The escalation rule is deliberately conservative. The dismiss-based path requires both a low-mood signal within 3 days and at least 2 dismissed nudges within 7 days. The repeated-low-mood path requires 3 or more low-mood signals within 3 days, catching persistent distress even without dismiss history. Both paths use confidence scores hard-capped below the automation threshold so they always route to a coach. The member-facing message simply says that the care team has been notified. The coach view shows the matched reason and confidence score for quick triage.
 
 ### Stale nudge persistence
 
@@ -111,7 +113,7 @@ For a broader deployment, a phased rollout approach introduces changes gradually
 - Add the missing operational pieces before wider rollout: authentication, coach resolution workflow, configurable thresholds, and a basic metrics dashboard.
 - Replace SQLite with a managed relational store and add role-aware access controls before treating the prototype as shared operational software.
 - Expand to additional programs only after the rules have been tuned on real usage and the coach workflow can absorb the escalation volume.
-- Add new evaluator types only after the initial three flows are stable and reviewable.
+- Add new evaluator types only after the initial four flows are stable and reviewable.
 
 ## Summary
 

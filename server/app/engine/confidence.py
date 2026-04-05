@@ -168,3 +168,53 @@ def score_support_risk(
     raw = base + mood_value + dismiss_value
     score = _clamp(min(raw, _SUPPORT_RISK_CAP))
     return score, factors
+
+
+# ---------------------------------------------------------------------------
+# Repeated low mood
+# ---------------------------------------------------------------------------
+
+def score_repeated_low_mood(
+    *,
+    low_mood_count: int,
+    most_recent_mood_ts: str,
+    mood_lookback_days: int = 3,
+    threshold: int = 3,
+) -> tuple[float, list[dict]]:
+    """Confidence for a repeated-low-mood candidate.
+
+    Same safety-path philosophy as support_risk: hard-capped below the
+    automation threshold so the nudge always routes to coach review.
+
+    Factors:
+      base        0.25  — conservative starting point
+      mood_count  up to +0.12, based on how many low moods above threshold
+      recency     up to +0.10, linear decay over the lookback window
+    """
+    factors: list[dict] = []
+
+    base = 0.25
+    factors.append({"name": "base", "value": base, "label": "Safety path — conservative base"})
+
+    extra = max(0, low_mood_count - threshold)
+    count_max = 0.12
+    count_value = round(min(count_max, 0.04 + extra * 0.03), 2)
+    factors.append({
+        "name": "mood_count",
+        "value": count_value,
+        "label": f"{low_mood_count} low mood logs in last {mood_lookback_days}d",
+    })
+
+    hours_ago = _hours_since(most_recent_mood_ts)
+    days_ago = hours_ago / 24.0
+    recency_max = 0.10
+    recency_value = round(max(0.0, recency_max * (1.0 - days_ago / mood_lookback_days)), 2)
+    if days_ago < 1:
+        recency_label = "Most recent low mood reported today"
+    else:
+        recency_label = f"Most recent low mood {days_ago:.1f}d ago"
+    factors.append({"name": "recency", "value": recency_value, "label": recency_label})
+
+    raw = base + count_value + recency_value
+    score = _clamp(min(raw, _SUPPORT_RISK_CAP))
+    return score, factors

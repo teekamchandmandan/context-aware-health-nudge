@@ -74,6 +74,46 @@ def _get_coach_nudge_visible_food_summary(row: sqlite3.Row) -> str | None:
     return _extract_visible_food_summary(row["meal_payload_json"])
 
 
+_SAFETY_PATH_TYPES = {"support_risk"}
+
+
+def _derive_confidence_summary(
+    nudge_type: str,
+    confidence: float | None,
+    factors: list[dict] | None,
+) -> str | None:
+    """Compute a human-readable confidence summary from stored data.
+
+    Derived at read time so nothing redundant is persisted — the factors
+    already capture the full audit trail.
+    """
+    if confidence is None:
+        return None
+
+    if nudge_type in _SAFETY_PATH_TYPES:
+        return (
+            "Safety path: score is intentionally conservative — "
+            "coach review is always recommended."
+        )
+
+    if confidence >= 0.75:
+        band = "High"
+    elif confidence >= 0.50:
+        band = "Moderate"
+    else:
+        band = "Low"
+
+    # Build a short rationale from the top non-base factor label.
+    reason = ""
+    if factors:
+        non_base = [f for f in factors if f.get("name") != "base"]
+        if non_base:
+            top = max(non_base, key=lambda f: abs(f.get("value", 0)))
+            reason = f" {top['label'].rstrip('.')}."
+
+    return f"{band} confidence.{reason}"
+
+
 def _build_coach_nudge_item(row: sqlite3.Row) -> CoachNudgeItem:
     factors_raw = row["confidence_factors_json"]
     factors = json.loads(factors_raw) if factors_raw else None
@@ -88,6 +128,9 @@ def _build_coach_nudge_item(row: sqlite3.Row) -> CoachNudgeItem:
         matched_reason=row["matched_reason"],
         confidence=row["confidence"],
         confidence_factors=factors,
+        confidence_summary=_derive_confidence_summary(
+            row["nudge_type"], row["confidence"], factors,
+        ),
         escalation_recommended=bool(row["escalation_recommended"]),
         status=row["status"],
         latest_action=row["latest_action_type"],

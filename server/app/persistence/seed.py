@@ -80,7 +80,21 @@ def _seed(conn: sqlite3.Connection) -> None:
             "member_support_01",
             "mood_logged",
             json.dumps({"mood": "low"}),
-            _ts(now - timedelta(days=1)),
+            _ts(now - timedelta(hours=48)),
+        ),
+        (
+            _id(),
+            "member_support_01",
+            "mood_logged",
+            json.dumps({"mood": "low"}),
+            _ts(now - timedelta(hours=30)),
+        ),
+        (
+            _id(),
+            "member_support_01",
+            "mood_logged",
+            json.dumps({"mood": "low"}),
+            _ts(now - timedelta(hours=6)),
         ),
         (
             _id(),

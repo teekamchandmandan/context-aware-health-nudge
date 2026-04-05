@@ -11,6 +11,22 @@ def get_active_nudge(conn: sqlite3.Connection, member_id: str) -> sqlite3.Row | 
     ).fetchone()
 
 
+def get_escalated_nudge(conn: sqlite3.Connection, member_id: str) -> sqlite3.Row | None:
+    return conn.execute(
+        """SELECT * FROM nudges
+           WHERE member_id = ?
+             AND status = 'escalated'
+             AND EXISTS (
+                 SELECT 1 FROM escalations
+                 WHERE escalations.nudge_id = nudges.id
+                   AND escalations.status = 'open'
+             )
+           ORDER BY created_at DESC
+           LIMIT 1""",
+        (member_id,),
+    ).fetchone()
+
+
 def has_newer_signal(conn: sqlite3.Connection, member_id: str, created_at: str) -> bool:
     row = conn.execute(
         "SELECT 1 FROM signals WHERE member_id = ? AND created_at > ? LIMIT 1",

@@ -4,7 +4,6 @@ from app.core.openai_chat import extract_message_content as _extract_message_con
 from app.core.openai_chat import extract_model_name as _extract_model_name
 from app.core.openai_chat import parse_json_output as _parse_json_output
 from app.core.openai_chat import request_chat_completion as _request_chat_completion
-from app.core.openai_chat import strip_code_fences as _strip_code_fences
 from app.core.config import OPENAI_MODEL, PHRASING_TIMEOUT_SECONDS
 
 from .models import PhrasingRequest
@@ -72,10 +71,6 @@ def extract_message_content(body: dict) -> str:
 
 def extract_model_name(body: dict) -> str:
     return _extract_model_name(body, OPENAI_MODEL)
-
-
-def strip_code_fences(text: str) -> str:
-    return _strip_code_fences(text)
 
 
 def parse_json_output(raw_content: str) -> dict:

@@ -99,6 +99,10 @@ def test_support_risk(db_conn):
     assert nudge["status"] == "escalated"
     assert nudge["confidence"] < 0.50, f"support_risk confidence {nudge['confidence']} should be below automation threshold"
 
+    assert nudge["matched_reason"] == "support_risk", (
+        f"expected dismiss-based path but got {nudge['matched_reason']}"
+    )
+
     nudge_audit = latest_audit_payload(db_conn, "nudge_generated", entity_id=result.get("nudge_id"))
     assert nudge_audit is not None
     assert nudge_audit["nudge_type"] == "support_risk"
@@ -146,6 +150,116 @@ def test_cooldown(db_conn):
     second_result = evaluate_member(db_conn, "member_meal_01")
     assert second_result["state"] == "active"
     assert second_result["nudge"]["nudge_type"] == "weight_check_in"
+
+
+def test_repeated_low_mood_triggers_escalation(db_conn):
+    """3+ low mood signals in the lookback window trigger an escalation
+    even without any dismiss history."""
+    member = "member_catchup_01"
+    for hours_ago in (40, 20, 2):
+        db_conn.execute(
+            "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+            (_id(), member, "mood_logged", json.dumps({"mood": "low"}), _ts(_now() - timedelta(hours=hours_ago))),
+        )
+    db_conn.commit()
+
+    result = evaluate_member(db_conn, member)
+    assert result["state"] == "escalated"
+    assert "nudge_id" in result
+    assert "escalation_id" in result
+
+    nudge = db_conn.execute("SELECT * FROM nudges WHERE id = ?", (result["nudge_id"],)).fetchone()
+    assert nudge["nudge_type"] == "support_risk"
+    assert nudge["matched_reason"] == "repeated_low_mood"
+    assert nudge["status"] == "escalated"
+    assert nudge["confidence"] < 0.50
+
+    esc = db_conn.execute("SELECT * FROM escalations WHERE id = ?", (result["escalation_id"],)).fetchone()
+    assert esc["status"] == "open"
+    assert "mood" in esc["reason"].lower()
+
+
+def test_repeated_low_mood_below_threshold(db_conn):
+    """Fewer than 3 low mood signals should NOT trigger a repeated_low_mood nudge."""
+    member = "member_catchup_01"
+    for hours_ago in (20, 2):
+        db_conn.execute(
+            "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+            (_id(), member, "mood_logged", json.dumps({"mood": "low"}), _ts(_now() - timedelta(hours=hours_ago))),
+        )
+    db_conn.commit()
+
+    result = evaluate_member(db_conn, member)
+    assert result["state"] == "no_nudge"
+
+
+def test_repeated_low_mood_ignores_non_low(db_conn):
+    """Only 'low' moods count toward the threshold; high/neutral are excluded."""
+    member = "member_catchup_01"
+    moods = [("low", 40), ("high", 30), ("low", 20), ("neutral", 10), ("low", 1)]
+    for mood, hours_ago in moods:
+        db_conn.execute(
+            "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+            (_id(), member, "mood_logged", json.dumps({"mood": mood}), _ts(_now() - timedelta(hours=hours_ago))),
+        )
+    db_conn.commit()
+
+    result = evaluate_member(db_conn, member)
+    assert result["state"] == "escalated"
+    nudge = db_conn.execute("SELECT * FROM nudges WHERE id = ?", (result["nudge_id"],)).fetchone()
+    assert nudge["matched_reason"] == "repeated_low_mood"
+
+
+def test_repeated_low_mood_bypasses_fatigue(db_conn):
+    """Repeated low mood escalation should ignore daily cap."""
+    member = "member_catchup_01"
+    # Create 2 nudges today to hit the daily cap
+    for i in range(2):
+        db_conn.execute(
+            """INSERT INTO nudges (id, member_id, nudge_type, content, explanation, matched_reason,
+               confidence, escalation_recommended, status, generated_by, phrasing_source,
+               created_at, delivered_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (_id(), member, "weight_check_in", "content", "explanation", "missing_weight_log",
+             0.55, 0, "active", "rule_engine", "template", _ts(_now() - timedelta(hours=i + 1)),
+             _ts(_now() - timedelta(hours=i + 1))),
+        )
+    # Add 3 low moods
+    for hours_ago in (40, 20, 1):
+        db_conn.execute(
+            "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+            (_id(), member, "mood_logged", json.dumps({"mood": "low"}), _ts(_now() - timedelta(hours=hours_ago))),
+        )
+    db_conn.commit()
+
+    result = evaluate_member(db_conn, member)
+    assert result["state"] == "escalated"
+    nudge = db_conn.execute("SELECT * FROM nudges WHERE id = ?", (result["nudge_id"],)).fetchone()
+    assert nudge["matched_reason"] == "repeated_low_mood"
+
+
+def test_escalation_idempotency(db_conn):
+    """Calling evaluate_member multiple times for an escalated member must not create duplicates."""
+    member = "member_catchup_01"
+    for hours_ago in (40, 20, 2):
+        db_conn.execute(
+            "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+            (_id(), member, "mood_logged", json.dumps({"mood": "low"}), _ts(_now() - timedelta(hours=hours_ago))),
+        )
+    db_conn.commit()
+
+    first = evaluate_member(db_conn, member)
+    assert first["state"] == "escalated"
+
+    second = evaluate_member(db_conn, member)
+    assert second["state"] == "escalated"
+    assert second["nudge_id"] == first["nudge_id"]
+    assert second["escalation_id"] == first["escalation_id"]
+
+    esc_count = db_conn.execute(
+        "SELECT COUNT(*) as cnt FROM escalations WHERE member_id = ?", (member,)
+    ).fetchone()["cnt"]
+    assert esc_count == 1
 
 
 def test_daily_cap(db_conn):

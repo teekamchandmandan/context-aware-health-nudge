@@ -16,15 +16,15 @@ Scope stays narrow: one member-to-coach workflow.
 
 ## 2. Current Status
 
-| Area                          | Current state                                                                                            |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Backend vertical slice        | Implemented in FastAPI with SQLite persistence and seeded demo scenarios                                 |
-| Deterministic decision engine | Implemented with three evaluators, fatigue rules, idempotent reads, and supersede-on-new-signal behavior |
-| Member experience             | Implemented at `/member` with member switching, nudge actions, and live quick logging                    |
-| Coach experience              | Implemented at `/coach` with open escalations and expandable recent-nudge review                         |
-| Optional AI usage             | Implemented for bounded nudge phrasing and photo-only meal analysis, with deterministic fallbacks        |
-| Observability                 | Implemented with audit events and structured logging hooks                                               |
-| Backend verification          | Implemented and currently passing via `make test`                                                        |
+| Area                          | Current state                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Backend vertical slice        | Implemented in FastAPI with SQLite persistence and seeded demo scenarios                                |
+| Deterministic decision engine | Implemented with four evaluators, fatigue rules, idempotent reads, and supersede-on-new-signal behavior |
+| Member experience             | Implemented at `/member` with member switching, nudge actions, and live quick logging                   |
+| Coach experience              | Implemented at `/coach` with open escalations and expandable recent-nudge review                        |
+| Optional AI usage             | Implemented for bounded nudge phrasing and photo-only meal analysis, with deterministic fallbacks       |
+| Observability                 | Implemented with audit events and structured logging hooks                                              |
+| Backend verification          | Implemented and currently passing via `make test`                                                       |
 
 ## 3. Scope Boundaries
 
@@ -44,12 +44,12 @@ The implementation stays centered on one member-to-coach workflow.
 
 The repo currently supports four seeded member states that make the demo reviewable without auth.
 
-| Member              | Purpose                    | Expected state                         |
-| ------------------- | -------------------------- | -------------------------------------- |
-| `member_meal_01`    | Meal guidance path         | `active` meal-guidance nudge           |
-| `member_weight_01`  | Missed weight logging path | `active` weight check-in nudge         |
-| `member_support_01` | Support-risk path          | `escalated` with open coach escalation |
-| `member_catchup_01` | Control / catch-up case    | `no_nudge`                             |
+| Member              | Purpose                    | Expected state                                                                                                                     |
+| ------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `member_meal_01`    | Meal guidance path         | `active` meal-guidance nudge                                                                                                       |
+| `member_weight_01`  | Missed weight logging path | `active` weight check-in nudge                                                                                                     |
+| `member_support_01` | Support-risk path          | `escalated` with open coach escalation (seeded with 3 low-mood signals and dismiss history to exercise both support-risk triggers) |
+| `member_catchup_01` | Control / catch-up case    | `no_nudge`                                                                                                                         |
 
 Member switching is handled in the client so a reviewer can move across these scenarios directly.
 
@@ -95,13 +95,14 @@ The app is a local-first prototype with a thin app assembly layer and explicit p
 
 ## 6. Decisioning Model
 
-The current engine uses three explicit evaluators.
+The current engine uses four explicit evaluators.
 
 | Evaluator                  | Trigger                                                                                                                  | Confidence                      | Outcome                        |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------- | ------------------------------ |
 | `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent `meal_logged` signal in the last 24 hours has `meal_profile = higher_carb` | `0.70` base, computed 0.78–0.90 | Active `meal_guidance` nudge   |
 | `check_missing_weight_log` | No `weight_logged` signal in the last 4 days                                                                             | `0.50` base, computed 0.50–0.76 | Active `weight_check_in` nudge |
 | `check_support_risk`       | Most recent mood in the last 3 days is `low` and there have been at least 2 dismissals in the last 7 days                | `0.25` base, capped at 0.48     | Escalated `support_risk` path  |
+| `check_repeated_low_mood`  | 3 or more `mood_logged` signals with `mood = low` in the last 3 days, independent of dismiss history                     | `0.25` base, capped at 0.48     | Escalated `support_risk` path  |
 
 Operating rules:
 
