@@ -5,6 +5,26 @@ export type SignalType = 'weight_logged' | 'mood_logged' | 'sleep_logged';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type MoodValue = 'low' | 'neutral' | 'high';
 
+// Latest signals — typed payloads per signal kind
+export interface WeightSignalEntry {
+  payload: { weight_lb: number };
+  logged_at: string;
+}
+export interface SleepSignalEntry {
+  payload: { sleep_hours: number };
+  logged_at: string;
+}
+export interface MoodSignalEntry {
+  payload: { mood: MoodValue };
+  logged_at: string;
+}
+
+export interface LatestSignalsResponse {
+  weight_logged?: WeightSignalEntry;
+  sleep_logged?: SleepSignalEntry;
+  mood_logged?: MoodSignalEntry;
+}
+
 // Responses
 export interface MemberRef {
   id: string;

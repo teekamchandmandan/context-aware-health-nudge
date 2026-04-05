@@ -15,7 +15,7 @@ from app.services.meal_logging import (
     read_meal_photo,
     validate_meal_upload_form,
 )
-from app.services.signals import persist_signal
+from app.services.signals import get_latest_signals, persist_signal
 
 router = APIRouter(prefix="/api/members", tags=["members"])
 
@@ -71,6 +71,15 @@ def get_member_nudge(
 
     result = evaluate_member(conn, member_id)
     return _build_member_nudge_response(member, result)
+
+
+@router.get("/{member_id}/signals/latest")
+def get_member_latest_signals(
+    member_id: Annotated[str, Path()],
+    conn: DbDep,
+) -> dict:
+    get_member_or_404(conn, member_id)
+    return get_latest_signals(conn, member_id)
 
 
 @router.post("/{member_id}/meal-logs", response_model_exclude_none=True)

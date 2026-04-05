@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 interface LogCardProps {
   eyebrow: string;
   title: string;
+  subtitle?: string;
   children: ReactNode;
   apiError: string | null;
   className?: string;
@@ -11,6 +12,7 @@ interface LogCardProps {
 export default function LogCard({
   eyebrow,
   title,
+  subtitle,
   children,
   apiError,
   className,
@@ -26,6 +28,9 @@ export default function LogCard({
       <h3 className='mt-1 font-headline text-lg font-bold tracking-[-0.04em] text-[var(--color-primary)]'>
         {title}
       </h3>
+      {subtitle && (
+        <p className='mt-0.5 text-xs text-[var(--color-muted)]'>{subtitle}</p>
+      )}
 
       {apiError && (
         <p

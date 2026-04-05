@@ -10,6 +10,45 @@ def utc_timestamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
 
 
+_LATEST_SIGNAL_TYPES = ("weight_logged", "sleep_logged", "mood_logged")
+
+
+def get_latest_signals(
+    conn: sqlite3.Connection,
+    member_id: str,
+) -> dict[str, dict]:
+    """Return the most recent signal per type for a member."""
+    placeholders = ",".join("?" for _ in _LATEST_SIGNAL_TYPES)
+    rows = conn.execute(
+        f"""
+        SELECT signal_type, payload_json, created_at
+        FROM (
+            SELECT
+                signal_type,
+                payload_json,
+                created_at,
+                ROW_NUMBER() OVER (
+                    PARTITION BY signal_type
+                    ORDER BY created_at DESC, id DESC
+                ) AS rn
+            FROM signals
+            WHERE member_id = ? AND signal_type IN ({placeholders})
+        ) latest
+        WHERE rn = 1
+        """,
+        (member_id, *_LATEST_SIGNAL_TYPES),
+    ).fetchall()
+
+    result: dict[str, dict] = {}
+    for row in rows:
+        payload = json.loads(row["payload_json"]) if isinstance(row["payload_json"], str) else row["payload_json"]
+        result[row["signal_type"]] = {
+            "payload": payload,
+            "logged_at": row["created_at"],
+        }
+    return result
+
+
 def persist_signal(
     conn: sqlite3.Connection,
     *,

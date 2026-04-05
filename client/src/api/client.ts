@@ -6,6 +6,7 @@ import type {
   SignalType,
   CoachNudgeListResponse,
   CoachEscalationListResponse,
+  LatestSignalsResponse,
 } from '../types/member';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
@@ -89,6 +90,16 @@ export function fetchNudge(
 ): Promise<MemberNudgeResponse> {
   return request<MemberNudgeResponse>(
     `/api/members/${encodeURIComponent(memberId)}/nudge`,
+    { signal },
+  );
+}
+
+export function fetchLatestSignals(
+  memberId: string,
+  signal?: AbortSignal,
+): Promise<LatestSignalsResponse> {
+  return request<LatestSignalsResponse>(
+    `/api/members/${encodeURIComponent(memberId)}/signals/latest`,
     { signal },
   );
 }
