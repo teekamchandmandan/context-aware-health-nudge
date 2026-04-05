@@ -1,10 +1,12 @@
 import json
+import logging
 import sqlite3
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Path, Query
 
 from app.api.deps import DbDep
+from app.audit import record_audit_event, log_structured_event
 from app.models.coach import (
     CoachEscalationItem,
     CoachEscalationListResponse,
@@ -133,22 +135,40 @@ def resolve_escalation(
     escalation_id: Annotated[str, Path()],
     conn: DbDep,
 ) -> CoachEscalationItem:
+    now = utc_timestamp()
+    cursor = conn.execute(
+        "UPDATE escalations SET status = 'resolved', resolved_at = ? WHERE id = ? AND status = 'open'",
+        (now, escalation_id),
+    )
+
+    if cursor.rowcount == 0:
+        row = conn.execute(
+            "SELECT e.id, e.member_id, m.name AS member_name, e.reason, e.source, e.status, e.created_at FROM escalations e JOIN members m ON e.member_id = m.id WHERE e.id = ?",
+            (escalation_id,),
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Escalation not found")
+        raise HTTPException(status_code=409, detail="Escalation is already resolved")
+
+    record_audit_event(
+        conn,
+        event_type="escalation_resolved",
+        entity_type="escalation",
+        entity_id=escalation_id,
+        payload={"resolved_at": now},
+    )
+    conn.commit()
+
+    log_structured_event(
+        logging.INFO,
+        "escalation_resolved",
+        {"escalation_id": escalation_id, "resolved_at": now},
+    )
+
     row = conn.execute(
         "SELECT e.id, e.member_id, m.name AS member_name, e.reason, e.source, e.status, e.created_at FROM escalations e JOIN members m ON e.member_id = m.id WHERE e.id = ?",
         (escalation_id,),
     ).fetchone()
-    if not row:
-        raise HTTPException(status_code=404, detail="Escalation not found")
-
-    if row["status"] != "open":
-        raise HTTPException(status_code=409, detail="Escalation is already resolved")
-
-    now = utc_timestamp()
-    conn.execute(
-        "UPDATE escalations SET status = 'resolved', resolved_at = ? WHERE id = ?",
-        (now, escalation_id),
-    )
-    conn.commit()
 
     return CoachEscalationItem(
         escalation_id=row["id"],
@@ -156,6 +176,6 @@ def resolve_escalation(
         member_name=row["member_name"],
         reason=row["reason"],
         source=row["source"],
-        status="resolved",
+        status=row["status"],
         created_at=row["created_at"],
     )

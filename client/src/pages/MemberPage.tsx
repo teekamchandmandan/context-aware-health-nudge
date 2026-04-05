@@ -79,6 +79,8 @@ export default function MemberPage() {
       if (!ac.signal.aborted) setData(res);
     } catch {
       /* swallow — nudge section keeps its previous state */
+    } finally {
+      if (!ac.signal.aborted) setLoading(false);
     }
   }, [memberId]);
 

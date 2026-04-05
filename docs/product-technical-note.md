@@ -22,7 +22,7 @@ This note assumes a narrow, local prototype rather than a production health plat
 - **Deterministic decisioning.** The system decides whether to show a nudge through explicit rules, not through an LLM.
 - **Bounded LLM usage.** OpenAI is used only to classify meal photos and rewrite approved nudge copy. If the model is unavailable or returns invalid output, the system falls back to deterministic defaults.
 - **Single nudge at a time.** The product shows one current recommendation per member instead of a queue. That keeps the experience focused and makes the prototype easier to evaluate.
-- **Read-only coach surface.** The coach view exposes recent nudges and open escalations for review but does not support assignment, resolution, or note-taking workflows.
+- **Limited coach surface.** The coach view exposes recent nudges and open escalations for review. Escalation resolution is supported through the API but not through a dedicated UI workflow. Assignment and note-taking are not supported.
 
 ## System Model
 

@@ -95,6 +95,51 @@ def test_signal_422_unknown_type(api_client):
     assert response.status_code == 422
 
 
+def test_signal_422_cross_signal_extra_fields(api_client):
+    """Sending fields belonging to other signal types should be rejected with 422."""
+    # weight_logged with mood
+    r1 = api_client.post(
+        "/api/members/member_weight_01/signals",
+        json={"signal_type": "weight_logged", "payload": {"weight_lb": 180.0, "mood": "high"}},
+    )
+    assert r1.status_code == 422
+
+    # weight_logged with sleep_hours
+    r2 = api_client.post(
+        "/api/members/member_weight_01/signals",
+        json={"signal_type": "weight_logged", "payload": {"weight_lb": 180.0, "sleep_hours": 7}},
+    )
+    assert r2.status_code == 422
+
+    # mood_logged with weight_lb
+    r3 = api_client.post(
+        "/api/members/member_support_01/signals",
+        json={"signal_type": "mood_logged", "payload": {"mood": "high", "weight_lb": 180.0}},
+    )
+    assert r3.status_code == 422
+
+    # mood_logged with sleep_hours
+    r4 = api_client.post(
+        "/api/members/member_support_01/signals",
+        json={"signal_type": "mood_logged", "payload": {"mood": "high", "sleep_hours": 7}},
+    )
+    assert r4.status_code == 422
+
+    # sleep_logged with weight_lb
+    r5 = api_client.post(
+        "/api/members/member_meal_01/signals",
+        json={"signal_type": "sleep_logged", "payload": {"sleep_hours": 7.5, "weight_lb": 180.0}},
+    )
+    assert r5.status_code == 422
+
+    # sleep_logged with mood
+    r6 = api_client.post(
+        "/api/members/member_meal_01/signals",
+        json={"signal_type": "sleep_logged", "payload": {"sleep_hours": 7.5, "mood": "low"}},
+    )
+    assert r6.status_code == 422
+
+
 def test_signal_404_unknown_member(api_client):
     response = api_client.post(
         "/api/members/nonexistent/signals",

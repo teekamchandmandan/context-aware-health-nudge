@@ -84,3 +84,35 @@ def test_coach_escalations_from_ask_for_help(api_client):
     member_action_escalations = [item for item in data["items"] if item["source"] == "member_action"]
     assert member_action_escalations
     assert member_action_escalations[0]["member_id"] == "member_meal_01"
+
+
+def _create_open_escalation(api_client) -> str:
+    """Helper: trigger the support-risk escalation and return its id."""
+    api_client.get("/api/members/member_support_01/nudge")
+    esc_resp = api_client.get("/api/coach/escalations")
+    items = esc_resp.json()["items"]
+    support_esc = next(i for i in items if i["member_id"] == "member_support_01")
+    return support_esc["escalation_id"]
+
+
+def test_resolve_escalation_success(api_client):
+    esc_id = _create_open_escalation(api_client)
+    response = api_client.post(f"/api/coach/escalations/{esc_id}/resolve")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "resolved"
+    assert data["escalation_id"] == esc_id
+
+
+def test_resolve_escalation_409_already_resolved(api_client):
+    esc_id = _create_open_escalation(api_client)
+    first = api_client.post(f"/api/coach/escalations/{esc_id}/resolve")
+    assert first.status_code == 200
+
+    second = api_client.post(f"/api/coach/escalations/{esc_id}/resolve")
+    assert second.status_code == 409
+
+
+def test_resolve_escalation_404_unknown(api_client):
+    response = api_client.post("/api/coach/escalations/nonexistent_id/resolve")
+    assert response.status_code == 404
