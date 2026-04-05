@@ -12,6 +12,7 @@ class CoachNudgeItem(BaseModel):
     matched_reason: str | None = None
     confidence: float | None = Field(default=None, ge=0, le=1)
     confidence_factors: list[dict] | None = None
+    confidence_summary: str | None = None
     escalation_recommended: bool = False
     status: str
     latest_action: str | None = None
