@@ -24,7 +24,7 @@ Scope stays narrow: one member-to-coach workflow.
 | Coach experience              | Implemented at `/coach` with open escalations and expandable recent-nudge review                         |
 | Optional AI usage             | Implemented for bounded nudge phrasing and photo-only meal analysis, with deterministic fallbacks        |
 | Observability                 | Implemented with audit events and structured logging hooks                                               |
-| Backend verification          | Implemented and currently passing via `server/test_engine.py` and `server/test_api.py`                   |
+| Backend verification          | Implemented and currently passing via `make test`                                                        |
 
 ## 3. Scope Boundaries
 
@@ -210,13 +210,12 @@ Durable audit events:
 
 Verification assets:
 
-- `server/test_engine.py` covers evaluator logic, priority, cooldown, daily cap, superseding, escalation behavior, and phrasing fallback rules
-- `server/test_api.py` covers member endpoints, coach endpoints, action handling, meal-photo flow, validation behavior, audit recording, and LLM fallback behavior
+- `server/test_suites/engine_*_tests.py` cover evaluator logic, priority, cooldown, daily cap, superseding, escalation behavior, and phrasing fallback rules
+- `server/test_suites/api_*_tests.py` cover member endpoints, coach endpoints, action handling, meal-photo flow, validation behavior, audit recording, and LLM fallback behavior
 
 Verification status:
 
-- `server/test_engine.py`: passing locally
-- `server/test_api.py`: passing locally
+- `make test`: passing locally
 
 Supporting delivery docs present in the repo:
 
