@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import type { CoachEscalationItem } from '../types/member';
 import { formatTimestamp } from '../utils/formatTimestamp';
 
 interface Props {
   items: CoachEscalationItem[];
+  onResolve: (escalationId: string) => Promise<void>;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -25,7 +27,37 @@ function sourceIcon(source: string | null): string {
   return (source && SOURCE_ICONS[source]) ?? '•';
 }
 
-export default function CoachEscalationsList({ items }: Props) {
+function ResolveButton({
+  escalationId,
+  onResolve,
+}: {
+  escalationId: string;
+  onResolve: (id: string) => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  async function handleClick() {
+    setBusy(true);
+    try {
+      await onResolve(escalationId);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <button
+      type='button'
+      disabled={busy}
+      onClick={handleClick}
+      className='rounded-full border border-[var(--color-accent)] bg-[rgba(143,246,208,0.15)] px-3 py-1 text-xs font-semibold text-[var(--color-primary)] transition hover:bg-[rgba(143,246,208,0.35)] disabled:opacity-50'
+    >
+      {busy ? 'Resolving…' : 'Resolve'}
+    </button>
+  );
+}
+
+export default function CoachEscalationsList({ items, onResolve }: Props) {
   if (items.length === 0) {
     return (
       <div className='rounded-[1.75rem] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(242,244,244,0.95))] p-8 text-center shadow-[0_16px_48px_rgba(25,28,29,0.05)] backdrop-blur-xl'>
@@ -95,9 +127,10 @@ export default function CoachEscalationsList({ items }: Props) {
               <p className='text-xs text-[var(--color-muted)]'>
                 Escalated {formatTimestamp(esc.created_at)}
               </p>
-              <span className='text-xs font-medium capitalize text-[var(--color-primary)]'>
-                {esc.status}
-              </span>
+              <ResolveButton
+                escalationId={esc.escalation_id}
+                onResolve={onResolve}
+              />
             </div>
           </li>
         );

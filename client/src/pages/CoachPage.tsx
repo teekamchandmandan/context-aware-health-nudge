@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   fetchCoachNudges,
   fetchCoachEscalations,
+  resolveEscalation,
   ApiError,
 } from '../api/client';
 import type { CoachNudgeItem, CoachEscalationItem } from '../types/member';
@@ -77,6 +78,11 @@ export default function CoachPage() {
   function refreshAll() {
     loadNudges();
     loadEscalations();
+  }
+
+  async function handleResolve(escalationId: string) {
+    await resolveEscalation(escalationId);
+    await loadEscalations();
   }
 
   const openCount = escalations.length;
@@ -166,7 +172,10 @@ export default function CoachPage() {
             )}
 
             {!escalationsLoading && !escalationsError && (
-              <CoachEscalationsList items={escalations} />
+              <CoachEscalationsList
+                items={escalations}
+                onResolve={handleResolve}
+              />
             )}
           </div>
         </section>

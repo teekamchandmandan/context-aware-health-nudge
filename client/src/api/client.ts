@@ -6,6 +6,7 @@ import type {
   SignalType,
   CoachNudgeListResponse,
   CoachEscalationListResponse,
+  CoachEscalationItem,
   LatestSignalsResponse,
 } from '../types/member';
 
@@ -157,6 +158,15 @@ export function fetchCoachEscalations(
 ): Promise<CoachEscalationListResponse> {
   return request<CoachEscalationListResponse>(
     `/api/coach/escalations?limit=${limit}`,
+  );
+}
+
+export function resolveEscalation(
+  escalationId: string,
+): Promise<CoachEscalationItem> {
+  return request<CoachEscalationItem>(
+    `/api/coach/escalations/${encodeURIComponent(escalationId)}/resolve`,
+    { method: 'POST' },
   );
 }
 
