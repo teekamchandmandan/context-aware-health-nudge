@@ -42,13 +42,13 @@ The assignment is easier to trust if nudge creation is explainable before any AP
 
 ## Default Evaluator Rules
 
-| Evaluator                  | Trigger                                                                                                  | Candidate type    | Default confidence |
-| -------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------- | ------------------ |
-| `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent meal in the last 24 hours has `meal_profile = higher_carb` | `meal_guidance`   | `0.86`             |
-| `check_missing_weight_log` | No `weight_logged` signal in the last 4 full UTC days                                                    | `weight_check_in` | `0.68`             |
-| `check_support_risk`       | `mood_logged.mood == "low"` in the last 3 days and at least 2 `dismiss` actions in the last 7 days       | `support_risk`    | `0.42`             |
+| Evaluator                  | Trigger                                                                                                  | Candidate type    | Default confidence                |
+| -------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------- |
+| `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent meal in the last 24 hours has `meal_profile = higher_carb` | `meal_guidance`   | `0.70` base (computed 0.62–0.90)  |
+| `check_missing_weight_log` | No `weight_logged` signal in the last 4 full UTC days                                                    | `weight_check_in` | `0.50` base (computed 0.50–0.76)  |
+| `check_support_risk`       | `mood_logged.mood == "low"` in the last 3 days and at least 2 `dismiss` actions in the last 7 days       | `support_risk`    | `0.25` base (hard-capped at 0.48) |
 
-These constants are implementation defaults for the prototype. If they change later, update this file and `docs/plan.md` together.
+These base values are starting points. Computed confidence applies evidence-weighted adjustments (recency, classification clarity, overdue severity, member engagement, and dismissal patterns) documented in `server/app/engine/confidence.py`. Each adjustment is recorded as a named factor for auditability. If base values change, update this file and `docs/plan.md` together.
 
 ## Candidate Contract
 
@@ -58,6 +58,7 @@ Each evaluator should return either `None` or a candidate with these fields:
 - `matched_reason`
 - `explanation_basis`
 - `confidence`
+- `confidence_factors` — list of `{name, value, label}` dicts explaining each scoring adjustment
 - `escalation_recommended`
 - `source_signal_ids`
 - `priority`

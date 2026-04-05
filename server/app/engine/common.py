@@ -24,6 +24,7 @@ class NudgeCandidate(BaseModel):
     matched_reason: str
     explanation_basis: str
     confidence: float = Field(ge=0, le=1)
+    confidence_factors: list[dict] = Field(default_factory=list)
     escalation_recommended: bool
     source_signal_ids: list[str]
     priority: int

@@ -76,6 +76,12 @@ export interface SignalRequest {
 }
 
 // Coach responses
+export interface ConfidenceFactor {
+  name: string;
+  value: number;
+  label: string;
+}
+
 export interface CoachNudgeItem {
   nudge_id: string;
   member_id: string;
@@ -86,6 +92,7 @@ export interface CoachNudgeItem {
   explanation: string | null;
   matched_reason: string | null;
   confidence: number | null;
+  confidence_factors: ConfidenceFactor[] | null;
   escalation_recommended: boolean;
   status: string;
   latest_action: string | null;

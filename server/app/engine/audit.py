@@ -22,6 +22,7 @@ def record_nudge_generated(
         "nudge_type": candidate.nudge_type,
         "matched_reason": candidate.matched_reason,
         "confidence": candidate.confidence,
+        "confidence_factors": candidate.confidence_factors,
         "phrasing_source": phrasing_source,
     }
     if llm_model_name is not None:

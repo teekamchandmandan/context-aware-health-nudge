@@ -12,7 +12,7 @@ def test_meal_mismatch(db_conn):
 
     nudge = result["nudge"]
     assert nudge["nudge_type"] == "meal_guidance"
-    assert nudge["confidence"] == 0.86
+    assert 0.70 <= nudge["confidence"] <= 0.95, f"meal confidence {nudge['confidence']} out of expected range"
     assert nudge["matched_reason"] == "meal_goal_mismatch"
     assert nudge["delivered_at"] is not None
     assert nudge["status"] == "active"
@@ -21,7 +21,7 @@ def test_meal_mismatch(db_conn):
     assert audit_payload is not None
     assert audit_payload["member_id"] == "member_meal_01"
     assert audit_payload["nudge_id"] == nudge["id"]
-    assert audit_payload["confidence"] == 0.86
+    assert 0.70 <= audit_payload["confidence"] <= 0.95
     assert audit_payload["phrasing_source"] == "template"
 
 
@@ -43,7 +43,7 @@ def test_missing_weight(db_conn):
     result = evaluate_member(db_conn, "member_weight_01")
     assert result["state"] == "active"
     assert result["nudge"]["nudge_type"] == "weight_check_in"
-    assert result["nudge"]["confidence"] == 0.68
+    assert 0.50 <= result["nudge"]["confidence"] <= 0.80, f"weight confidence {result['nudge']['confidence']} out of expected range"
     assert result["nudge"]["matched_reason"] == "missing_weight_log"
 
 
@@ -97,7 +97,7 @@ def test_support_risk(db_conn):
     ).fetchone()
     assert nudge is not None
     assert nudge["status"] == "escalated"
-    assert nudge["confidence"] == 0.42
+    assert nudge["confidence"] < 0.50, f"support_risk confidence {nudge['confidence']} should be below automation threshold"
 
     nudge_audit = latest_audit_payload(db_conn, "nudge_generated", entity_id=result.get("nudge_id"))
     assert nudge_audit is not None
