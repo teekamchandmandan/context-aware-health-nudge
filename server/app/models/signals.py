@@ -35,14 +35,20 @@ class SignalRequest(BaseModel):
         if self.signal_type == SignalType.weight_logged:
             if payload.weight_lb is None:
                 raise ValueError("weight_lb is required for weight_logged")
+            if payload.mood is not None or payload.sleep_hours is not None:
+                raise ValueError("mood and sleep_hours are not allowed for weight_logged")
         elif self.signal_type == SignalType.mood_logged:
             if not payload.mood:
                 raise ValueError("mood is required for mood_logged")
             if payload.mood not in ALLOWED_MOODS:
                 raise ValueError("mood must be one of: low, neutral, high")
+            if payload.weight_lb is not None or payload.sleep_hours is not None:
+                raise ValueError("weight_lb and sleep_hours are not allowed for mood_logged")
         elif self.signal_type == SignalType.sleep_logged:
             if payload.sleep_hours is None:
                 raise ValueError("sleep_hours is required for sleep_logged")
+            if payload.weight_lb is not None or payload.mood is not None:
+                raise ValueError("weight_lb and mood are not allowed for sleep_logged")
         return self
 
 
