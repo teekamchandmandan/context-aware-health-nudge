@@ -1,6 +1,6 @@
 # Context-Aware Health Nudge
 
-This document reflects the implementation currently in the repository as of 2026-04-05. The phase files in `docs/` remain the original execution specs; this file is now the high-level as-built decision record.
+This document captures the implementation in the repo as of 2026-04-05. The phase files in `docs/` remain the branch specs; this file records the as-built system.
 
 ## 1. Current Objective
 
@@ -9,10 +9,10 @@ The project delivers a focused member-to-coach vertical slice:
 - a deterministic rule engine decides whether a nudge should exist
 - the member route shows one current state at a time: `active`, `no_nudge`, or `escalated`
 - the coach route exposes recent nudges and open escalations for review
-- LLM usage is optional and tightly bounded to phrasing and meal-photo analysis
+- LLM usage is optional and limited to phrasing and meal-photo analysis
 - audit logging captures the key system events needed for review
 
-The product is intentionally narrow. It is a coherent local prototype, not the start of a full health platform.
+Scope stays narrow: one member-to-coach workflow.
 
 ## 2. Current Status
 
@@ -74,7 +74,7 @@ Current stack:
 - Persistence: SQLite
 - Backend layout: `app.api`, `app.engine`, `app.phrasing`, `app.meal_analysis`, `app.persistence`, `app.observability`
 
-The app remains a simple local-first prototype with a thin app assembly layer and explicit package boundaries.
+The app is a local-first prototype with a thin app assembly layer and explicit package boundaries.
 
 ## 6. Decisioning Model
 
@@ -86,7 +86,7 @@ The current engine uses three explicit evaluators.
 | `check_missing_weight_log` | No `weight_logged` signal in the last 4 days                                                                             | `0.68`     | Active `weight_check_in` nudge |
 | `check_support_risk`       | Most recent mood in the last 3 days is `low` and there have been at least 2 dismissals in the last 7 days                | `0.42`     | Escalated `support_risk` path  |
 
-Operating rules currently implemented:
+Operating rules:
 
 | Area                    | Current behavior                                                                                          |
 | ----------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -102,7 +102,7 @@ This supersede-on-new-signal behavior is the main functional difference from the
 
 ## 7. LLM Usage and Safety Boundaries
 
-The implementation uses optional OpenAI-backed behavior in exactly two places.
+OpenAI is optional and used in two places.
 
 ### Phrasing
 
@@ -153,7 +153,7 @@ The schema also includes indexes for frequent query paths across signals, nudges
 
 ## 9. API Surface
 
-The currently implemented API surface is:
+API surface:
 
 | Method | Endpoint                             | Purpose                                                  |
 | ------ | ------------------------------------ | -------------------------------------------------------- |
@@ -179,7 +179,7 @@ Current API behavior:
 
 ### Member route
 
-The member experience is implemented at `/member` and currently includes:
+The member route at `/member` includes:
 
 - seeded member switching by query parameter
 - an active nudge card with explanation and exactly three actions
@@ -190,7 +190,7 @@ The member experience is implemented at `/member` and currently includes:
 
 ### Coach route
 
-The coach experience is implemented at `/coach` and currently includes:
+The coach route at `/coach` includes:
 
 - open escalations with member name, reason, source, status, and timestamp
 - recent nudges with confidence, status, and latest member action
@@ -200,7 +200,7 @@ The coach experience is implemented at `/coach` and currently includes:
 
 ## 11. Observability and Verification
 
-Current durable audit events:
+Durable audit events:
 
 - `nudge_generated`
 - `user_action`
@@ -208,15 +208,15 @@ Current durable audit events:
 - `llm_call`
 - `llm_fallback`
 
-Current verification assets:
+Verification assets:
 
 - `server/test_engine.py` covers evaluator logic, priority, cooldown, daily cap, superseding, escalation behavior, and phrasing fallback rules
 - `server/test_api.py` covers member endpoints, coach endpoints, action handling, meal-photo flow, validation behavior, audit recording, and LLM fallback behavior
 
-Current verification status:
+Verification status:
 
-- `server/test_engine.py`: 96 passed, 0 failed
-- `server/test_api.py`: 161 passed, 0 failed
+- `server/test_engine.py`: passing locally
+- `server/test_api.py`: passing locally
 
 Supporting delivery docs present in the repo:
 
@@ -226,14 +226,13 @@ Supporting delivery docs present in the repo:
 
 ## 12. Known Deltas and Follow-On Work
 
-The implementation is substantially aligned with the later phase docs, but a few items still deserve explicit tracking.
+Two deltas are worth keeping explicit.
 
 1. The current coach header includes a direct link to `/member`, which differs from the stricter route-isolation goal described in the UI redesign phase.
 2. The high-level draft plan originally omitted the dedicated `/api/members/{member_id}/meal-logs` endpoint and the `meal_logged` / `sleep_logged` signal footprint; this document now treats those as part of the implemented contract.
-3. `README.md` still contains a placeholder AI usage disclosure section and should be finalized separately from this plan update.
 
 ## 13. Intentional Exclusions
 
 This prototype still intentionally excludes production auth, Docker, PostgreSQL, notifications, analytics dashboards, configurable rules UI, coach workload management, external health integrations, and compliance-grade infrastructure.
 
-That remains the right tradeoff for this codebase. The implemented system is strongest as a clear, testable, bounded vertical slice.
+Those are reasonable tradeoffs for a local prototype.
