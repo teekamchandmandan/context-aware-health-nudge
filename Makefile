@@ -1,4 +1,4 @@
-.PHONY: setup dev
+.PHONY: setup dev test
 
 setup:
 	@echo "Setting up backend..."
@@ -13,3 +13,7 @@ setup:
 dev:
 	@echo "Starting both frontend and backend in parallel..."
 	@cd server && .venv/bin/uvicorn app.main:app --reload & cd client && npm run dev & wait
+
+test:
+	@echo "Running backend tests with pytest..."
+	@cd server && .venv/bin/python -m pytest -q

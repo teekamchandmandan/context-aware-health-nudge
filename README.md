@@ -12,6 +12,9 @@ Requires Node.js (≥20) and Python (3.10+).
 # Installs dependencies (Python venv + npm) and seeds the SQLite database
 make setup
 
+# Runs the backend test suite with pytest
+make test
+
 # Starts frontend (http://localhost:5173) and backend API (http://127.0.0.1:8000)
 make dev
 ```
