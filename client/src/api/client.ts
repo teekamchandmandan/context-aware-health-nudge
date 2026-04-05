@@ -57,6 +57,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers,
     });
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw error;
     throw new ApiError(
       0,
       error instanceof Error ? error.message : 'Network request failed',
@@ -82,9 +83,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function fetchNudge(memberId: string): Promise<MemberNudgeResponse> {
+export function fetchNudge(
+  memberId: string,
+  signal?: AbortSignal,
+): Promise<MemberNudgeResponse> {
   return request<MemberNudgeResponse>(
     `/api/members/${encodeURIComponent(memberId)}/nudge`,
+    { signal },
   );
 }
 
