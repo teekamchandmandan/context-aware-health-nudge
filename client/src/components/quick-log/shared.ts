@@ -24,6 +24,10 @@ export const MOOD_OPTIONS: Array<{
   { value: 'high', label: 'Great' },
 ];
 
+export const MOOD_LABELS: Record<MoodValue, string> = Object.fromEntries(
+  MOOD_OPTIONS.map(({ value, label }) => [value, label]),
+) as Record<MoodValue, string>;
+
 export const INPUT_CLASSES =
   'w-full rounded-[1rem] border border-[rgba(190,200,200,0.9)] bg-white px-4 py-3 text-sm text-[var(--color-text)] shadow-[inset_0_1px_2px_rgba(25,28,29,0.03)] transition focus:border-[var(--color-primary-strong)] focus:outline-none focus:ring-4 focus:ring-[rgba(168,239,239,0.45)]';
 
@@ -35,10 +39,19 @@ export const PRIMARY_BUTTON_CLASSES =
 
 export const KG_TO_LB = 2.20462;
 export const ML_PER_GLASS = 250;
+export const REQUEST_ERROR_MESSAGE =
+  'We could not save that. Please try again.';
 
-export function parsePositiveNumber(value: string): number | null {
+export function parsePositiveNumber(
+  value: string,
+  maximum?: number,
+): number | null {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  if (typeof maximum === 'number' && parsed > maximum) {
     return null;
   }
 
@@ -66,15 +79,9 @@ export function getValidationMessage(error: ApiError): string | null {
 }
 
 export function getRequestErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.status === 404) {
-      console.error('Request endpoint returned 404', error.body);
-    }
-
-    if (error.status === 0 || error.status === 404 || error.status >= 500) {
-      return 'We could not save that. Please try again.';
-    }
+  if (error instanceof ApiError && error.status === 404) {
+    console.error('Request endpoint returned 404', error.body);
   }
 
-  return 'We could not save that. Please try again.';
+  return REQUEST_ERROR_MESSAGE;
 }

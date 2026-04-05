@@ -5,7 +5,8 @@ import MoodForm from './quick-log/MoodForm';
 import SleepForm from './quick-log/SleepForm';
 import WeightForm from './quick-log/WeightForm';
 import { useCardFeedback } from './quick-log/useCardFeedback';
-import ToastContainer, { createToastId, type ToastItem } from './Toast';
+import ToastContainer from './Toast';
+import { createToastId, type ToastItem } from './Toast.shared';
 
 interface Props {
   memberId: string;
@@ -32,6 +33,15 @@ export default function QuickLog({ memberId, onSignalSubmitted }: Props) {
   const meal = useCardFeedback(showToast);
   const sleep = useCardFeedback(showToast);
 
+  const getFormProps = (feedback: typeof weight) => ({
+    memberId,
+    submitting: feedback.submitting,
+    setSubmitting: feedback.setSubmitting,
+    onSuccess: feedback.handleSuccess,
+    onError: feedback.setApiError,
+    clearFeedback: feedback.clearFeedback,
+  });
+
   return (
     <>
       <div className='grid gap-4 grid-cols-1 sm:grid-cols-3'>
@@ -40,14 +50,7 @@ export default function QuickLog({ memberId, onSignalSubmitted }: Props) {
           title='Track your weight'
           apiError={weight.apiError}
         >
-          <WeightForm
-            memberId={memberId}
-            submitting={weight.submitting}
-            setSubmitting={weight.setSubmitting}
-            onSuccess={weight.handleSuccess}
-            onError={weight.setApiError}
-            clearFeedback={weight.clearFeedback}
-          />
+          <WeightForm {...getFormProps(weight)} />
         </LogCard>
 
         <LogCard
@@ -55,14 +58,7 @@ export default function QuickLog({ memberId, onSignalSubmitted }: Props) {
           title='How many hours?'
           apiError={sleep.apiError}
         >
-          <SleepForm
-            memberId={memberId}
-            submitting={sleep.submitting}
-            setSubmitting={sleep.setSubmitting}
-            onSuccess={sleep.handleSuccess}
-            onError={sleep.setApiError}
-            clearFeedback={sleep.clearFeedback}
-          />
+          <SleepForm {...getFormProps(sleep)} />
         </LogCard>
 
         <LogCard
@@ -70,14 +66,7 @@ export default function QuickLog({ memberId, onSignalSubmitted }: Props) {
           title='How are you feeling?'
           apiError={mood.apiError}
         >
-          <MoodForm
-            memberId={memberId}
-            submitting={mood.submitting}
-            setSubmitting={mood.setSubmitting}
-            onSuccess={mood.handleSuccess}
-            onError={mood.setApiError}
-            clearFeedback={mood.clearFeedback}
-          />
+          <MoodForm {...getFormProps(mood)} />
         </LogCard>
 
         <LogCard
@@ -86,14 +75,7 @@ export default function QuickLog({ memberId, onSignalSubmitted }: Props) {
           apiError={meal.apiError}
           className='sm:col-span-3'
         >
-          <MealForm
-            memberId={memberId}
-            submitting={meal.submitting}
-            setSubmitting={meal.setSubmitting}
-            onSuccess={meal.handleSuccess}
-            onError={meal.setApiError}
-            clearFeedback={meal.clearFeedback}
-          />
+          <MealForm {...getFormProps(meal)} />
         </LogCard>
       </div>
       <ToastContainer toasts={toasts} onRemove={removeToast} />

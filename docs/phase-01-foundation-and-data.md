@@ -96,7 +96,7 @@ Optional extra demo coverage is fine when it improves product validation without
 
 Example payload shapes:
 
-- `meal_logged`: `{ "meal_type": "lunch", "carbs_g": 72, "protein_g": 18, "photo_attached": true }`
+- `meal_logged`: `{ "meal_profile": "higher_carb", "visible_food_summary": "The photo appears to show a pasta dish with bread." }`
 - `weight_logged`: `{ "weight_lb": 182.4 }`
 - `mood_logged`: `{ "mood": "low" }`
 

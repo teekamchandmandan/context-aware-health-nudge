@@ -14,7 +14,6 @@ from app.services.meal_logging import (
     create_meal_draft_response,
     read_meal_photo,
     validate_meal_upload_form,
-    validate_meal_log_input,
 )
 from app.services.signals import persist_signal
 
@@ -84,14 +83,13 @@ async def post_member_meal_log(
     get_member_or_404(conn, member_id)
     await validate_meal_upload_form(request)
 
-    meal_input = validate_meal_log_input(
-        photo_attached=photo is not None,
-    )
     photo_bytes, photo_content_type = await read_meal_photo(photo, require_image=True)
 
     meal_analysis = await anyio.to_thread.run_sync(
         partial(
             create_meal_draft_response,
+            conn=conn,
+            member_id=member_id,
             photo_bytes=photo_bytes,
             photo_content_type=photo_content_type,
         )
@@ -101,7 +99,7 @@ async def post_member_meal_log(
         conn,
         member_id=member_id,
         signal_type="meal_logged",
-        payload_dict=build_meal_log_payload(meal_input, meal_analysis),
+        payload_dict=build_meal_log_payload(meal_analysis),
     )
 
 

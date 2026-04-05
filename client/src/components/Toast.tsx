@@ -1,14 +1,5 @@
 import { useEffect, useState } from 'react';
-
-export interface ToastItem {
-  id: number;
-  message: string;
-}
-
-let nextId = 1;
-export function createToastId() {
-  return nextId++;
-}
+import type { ToastItem } from './Toast.shared';
 
 function ToastBubble({
   message,

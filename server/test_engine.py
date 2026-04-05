@@ -15,6 +15,7 @@ os.environ["OPENAI_API_KEY"] = ""
 import httpx
 from pydantic import ValidationError
 
+from app.core.config import OPENAI_MODEL
 from app.database import _connect
 from app.seed import reset_and_seed
 from app.engine import (
@@ -237,10 +238,7 @@ def test_priority_order():
             "meal_logged",
             json.dumps(
                 {
-                    "meal_type": "dinner",
-                    "carbs_g": 95,
-                    "photo_attached": True,
-                    "analysis_source": "llm",
+                    "meal_profile": "higher_carb",
                 }
             ),
             _ts(_now() - timedelta(hours=2)),
@@ -385,8 +383,8 @@ def test_evaluator_units():
     conn.close()
 
 
-def test_meal_log_without_photo_attachment_is_ignored():
-    section("Meal payload without photo attachment does not trigger guidance")
+def test_meal_log_without_meal_profile_is_ignored():
+    section("Meal payload without meal profile does not trigger guidance")
     conn = fresh_db()
 
     conn.execute("UPDATE members SET goal_type = 'low_carb' WHERE id = 'member_weight_01'")
@@ -396,21 +394,14 @@ def test_meal_log_without_photo_attachment_is_ignored():
             _id(),
             "member_weight_01",
             "meal_logged",
-            json.dumps(
-                {
-                    "meal_type": "dinner",
-                    "carbs_g": 82,
-                    "analysis_source": "llm",
-                    "photo_attached": False,
-                }
-            ),
+            json.dumps({"visible_food_summary": "The photo appears to show a plated meal."}),
             _ts(_now()),
         ),
     )
     conn.commit()
 
     candidate = check_meal_goal_mismatch(conn, "member_weight_01")
-    ok("meal without photo attachment does not trigger guidance", candidate is None)
+    ok("meal without meal profile does not trigger guidance", candidate is None)
 
     conn.close()
 
@@ -428,10 +419,8 @@ def test_one_step_meal_input_is_trusted():
             "meal_logged",
             json.dumps(
                 {
-                    "meal_type": "dinner",
-                    "photo_attached": True,
-                    "carbs_g": 82,
-                    "analysis_source": "llm",
+                    "meal_profile": "higher_carb",
+                    "visible_food_summary": "The photo appears to show a pasta dish with bread.",
                 }
             ),
             _ts(_now()),
@@ -442,8 +431,8 @@ def test_one_step_meal_input_is_trusted():
     candidate = check_meal_goal_mismatch(conn, "member_weight_01")
     ok("one-step meal triggers guidance", candidate is not None)
     ok(
-        "one-step explanation uses meal type",
-        candidate is not None and "Dinner meal" in candidate.explanation_basis,
+        "one-step explanation uses meal profile",
+        candidate is not None and "higher carb" in candidate.explanation_basis,
         f"got {candidate.explanation_basis if candidate else 'None'}",
     )
 
@@ -453,14 +442,18 @@ def test_one_step_meal_input_is_trusted():
 def test_llm_success_upgrade():
     section("Phase 6: successful LLM phrasing upgrades active nudge")
     conn = fresh_db()
+    model_name = "gpt-5.4-test-phrasing"
 
     with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
         "app.phrasing._request_llm_json",
-        return_value=json.dumps(
-            {
-                "content": "Try a lighter, lower-carb dinner tonight to balance your earlier meal.",
-                "explanation": "You logged a higher-carb meal today and your goal is low carb.",
-            }
+        return_value=(
+            json.dumps(
+                {
+                    "content": "Try a lighter, lower-carb dinner tonight to balance your earlier meal.",
+                    "explanation": "You logged a higher-carb meal today and your goal is low carb.",
+                }
+            ),
+            model_name,
         ),
     ):
         result = evaluate_member(conn, "member_meal_01")
@@ -476,10 +469,17 @@ def test_llm_success_upgrade():
     ok("one llm_call event recorded", len([e for e in events if e["event_type"] == "llm_call"]) == 1)
     ok("no llm_fallback event recorded", len([e for e in events if e["event_type"] == "llm_fallback"]) == 0)
 
+    llm_call_audit = latest_audit_payload(conn, "llm_call", entity_id=nudge["id"])
+    ok("llm_call audit recorded", llm_call_audit is not None)
+    if llm_call_audit:
+        ok("llm_call prompt_area is phrasing", llm_call_audit["prompt_area"] == "phrasing", f"got {llm_call_audit['prompt_area']}")
+        ok("llm_call model_name recorded", llm_call_audit["model_name"] == model_name, f"got {llm_call_audit['model_name']}")
+
     nudge_audit = latest_audit_payload(conn, "nudge_generated", entity_id=nudge["id"])
     ok("nudge_generated audit reflects llm phrasing", nudge_audit is not None)
     if nudge_audit:
         ok("audit phrasing_source upgraded to llm", nudge_audit["phrasing_source"] == "llm")
+        ok("nudge_generated llm_model_name recorded", nudge_audit["llm_model_name"] == model_name, f"got {nudge_audit.get('llm_model_name')}")
 
     conn.close()
 
@@ -499,6 +499,8 @@ def test_missing_key_fallback_audit():
     if fallback:
         payload = json.loads(fallback["payload_json"])
         ok("fallback reason is missing_key", payload["fallback_reason"] == "missing_key", f"got {payload['fallback_reason']}")
+        ok("fallback prompt_area is phrasing", payload["prompt_area"] == "phrasing", f"got {payload['prompt_area']}")
+        ok("fallback model_name recorded", payload["model_name"] == OPENAI_MODEL, f"got {payload['model_name']}")
 
     conn.close()
 
@@ -506,10 +508,11 @@ def test_missing_key_fallback_audit():
 def test_llm_invalid_json_fallback():
     section("Phase 6: invalid JSON falls back to templates")
     conn = fresh_db()
+    model_name = "gpt-5.4-test-invalid-json"
 
     with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
         "app.phrasing._request_llm_json",
-        return_value="not-json",
+        return_value=("not-json", model_name),
     ):
         result = evaluate_member(conn, "member_meal_01")
 
@@ -521,6 +524,7 @@ def test_llm_invalid_json_fallback():
     if fallback:
         payload = json.loads(fallback["payload_json"])
         ok("fallback reason is invalid_json", payload["fallback_reason"] == "invalid_json", f"got {payload['fallback_reason']}")
+        ok("fallback model_name recorded", payload["model_name"] == model_name, f"got {payload['model_name']}")
 
     conn.close()
 
@@ -543,6 +547,7 @@ def test_llm_timeout_fallback():
     if fallback:
         payload = json.loads(fallback["payload_json"])
         ok("fallback reason is timeout", payload["fallback_reason"] == "timeout", f"got {payload['fallback_reason']}")
+        ok("fallback model_name recorded", payload["model_name"] == OPENAI_MODEL, f"got {payload['model_name']}")
 
     conn.close()
 
@@ -550,14 +555,18 @@ def test_llm_timeout_fallback():
 def test_validation_failure_fallback():
     section("Phase 6: blocked terms are rejected before persistence")
     conn = fresh_db()
+    model_name = "gpt-5.4-test-validation"
 
     with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
         "app.phrasing._request_llm_json",
-        return_value=json.dumps(
-            {
-                "content": "This may diagnose the issue for you.",
-                "explanation": "Medication is not needed right now.",
-            }
+        return_value=(
+            json.dumps(
+                {
+                    "content": "This may diagnose the issue for you.",
+                    "explanation": "Medication is not needed right now.",
+                }
+            ),
+            model_name,
         ),
     ):
         result = evaluate_member(conn, "member_meal_01")
@@ -580,6 +589,7 @@ def test_validation_failure_fallback():
             payload["fallback_reason"] == "validation_failure",
             f"got {payload['fallback_reason']}",
         )
+        ok("fallback model_name recorded", payload["model_name"] == model_name, f"got {payload['model_name']}")
 
     conn.close()
 
@@ -591,11 +601,14 @@ def test_existing_active_nudge_skips_rephrase():
 
     def fake_request(*_args, **_kwargs):
         calls["count"] += 1
-        return json.dumps(
-            {
-                "content": "Try a lighter dinner tonight to keep things aligned.",
-                "explanation": "You logged a higher-carb meal today and your goal is low carb.",
-            }
+        return (
+            json.dumps(
+                {
+                    "content": "Try a lighter dinner tonight to keep things aligned.",
+                    "explanation": "You logged a higher-carb meal today and your goal is low carb.",
+                }
+            ),
+            "gpt-5.4-test-idempotent",
         )
 
     with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
@@ -671,7 +684,7 @@ def test_phrasing_output_validation():
 
 if __name__ == "__main__":
     test_evaluator_units()
-    test_meal_log_without_photo_attachment_is_ignored()
+    test_meal_log_without_meal_profile_is_ignored()
     test_one_step_meal_input_is_trusted()
     test_meal_mismatch()
     test_idempotency()

@@ -3,7 +3,7 @@ import {
   useState,
   type ChangeEvent,
   type DragEvent,
-  type FormEvent,
+  type SyntheticEvent,
 } from 'react';
 import { ApiError, postMealLog } from '../../api/client';
 import type { FormProps, MealFieldErrors } from './shared';
@@ -12,6 +12,41 @@ import {
   getValidationMessage,
   PRIMARY_BUTTON_CLASSES,
 } from './shared';
+
+const CAMERA_ICON_PROPS = {
+  width: 28,
+  height: 28,
+  viewBox: '0 0 28 28',
+  fill: 'none',
+  'aria-hidden': true,
+} as const;
+
+function CameraUploadIcon() {
+  return (
+    <svg {...CAMERA_ICON_PROPS}>
+      <circle cx='14' cy='14' r='11' fill='rgba(168,239,239,0.3)' />
+      <path
+        d='M9.4 10.35h2.2l1.05-1.7h2.7l1.05 1.7h2.2c1 0 1.8.8 1.8 1.8v6.1c0 1-.8 1.8-1.8 1.8H9.4c-1 0-1.8-.8-1.8-1.8v-6.1c0-1 .8-1.8 1.8-1.8Z'
+        stroke='var(--color-primary)'
+        strokeWidth='1.8'
+        strokeLinecap='round'
+        strokeLinejoin='round'
+        fill='rgba(255,255,255,0.88)'
+      />
+      <circle
+        cx='14'
+        cy='15.1'
+        r='3.1'
+        stroke='var(--color-primary)'
+        strokeWidth='1.8'
+      />
+      <circle cx='18.25' cy='12.55' r='0.9' fill='var(--color-primary)' />
+    </svg>
+  );
+}
+
+const INVALID_PHOTO_MESSAGE = 'Upload an image file for meal photos.';
+const INVALID_DROP_MESSAGE = 'Please drop an image file.';
 
 export default function MealForm({
   memberId,
@@ -51,18 +86,38 @@ export default function MealForm({
   }
 
   function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
-    acceptFile(event.target.files?.[0] ?? null);
+    handlePhotoSelection(event.target.files?.[0] ?? null);
+  }
+
+  function handlePhotoSelection(
+    file: File | null,
+    missingFileMessage?: string,
+  ) {
+    if (!file) {
+      if (missingFileMessage) {
+        setFieldErrors({ photo: missingFileMessage });
+        return;
+      }
+
+      acceptFile(null);
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setFieldErrors({ photo: INVALID_PHOTO_MESSAGE });
+      return;
+    }
+
+    acceptFile(file);
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragging(false);
-    const file = event.dataTransfer.files?.[0] ?? null;
-    if (file && file.type.startsWith('image/')) {
-      acceptFile(file);
-    } else {
-      setFieldErrors({ photo: 'Please drop an image file.' });
-    }
+    handlePhotoSelection(
+      event.dataTransfer.files?.[0] ?? null,
+      INVALID_DROP_MESSAGE,
+    );
   }
 
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
@@ -74,21 +129,19 @@ export default function MealForm({
     setDragging(false);
   }
 
-  function mapMealValidationMessage(validationMessage: string) {
+  function getPhotoValidationError(validationMessage: string): string | null {
     if (validationMessage.includes('meal photo')) {
-      setFieldErrors({ photo: 'Add a photo of your meal.' });
-      return true;
+      return 'Add a photo of your meal.';
     }
 
     if (validationMessage.includes('image')) {
-      setFieldErrors({ photo: 'Upload an image file for meal photos.' });
-      return true;
+      return 'Upload an image file for meal photos.';
     }
 
-    return false;
+    return null;
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
     setFieldErrors({});
@@ -113,10 +166,14 @@ export default function MealForm({
       if (error instanceof ApiError && error.status === 422) {
         const validationMessage =
           getValidationMessage(error) ?? 'Check your photo and try again.';
+        const photoError = getPhotoValidationError(validationMessage);
 
-        if (!mapMealValidationMessage(validationMessage)) {
-          onError(validationMessage);
+        if (photoError) {
+          setFieldErrors({ photo: photoError });
+          return;
         }
+
+        onError(validationMessage);
         return;
       }
 
@@ -135,12 +192,12 @@ export default function MealForm({
           onDragLeave={handleDragLeave}
           className={`flex flex-col items-center justify-center rounded-[1.25rem] border-2 border-dashed px-6 py-10 text-center transition ${
             dragging
-              ? 'border-[var(--color-primary)] bg-[rgba(168,239,239,0.12)]'
-              : 'border-[rgba(190,200,200,0.7)] bg-[rgba(247,250,250,0.5)]'
+              ? 'border-[var(--color-primary)] bg-[linear-gradient(180deg,rgba(168,239,239,0.18),rgba(255,255,255,0.84))]'
+              : 'border-[rgba(190,200,200,0.7)] bg-[linear-gradient(180deg,rgba(255,255,255,0.8),rgba(242,244,244,0.72))]'
           }`}
         >
-          <div className='mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(190,200,200,0.2)] text-lg text-[var(--color-muted)]'>
-            <span aria-hidden='true'>📷</span>
+          <div className='mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-white/80 bg-white/92 shadow-[0_10px_30px_rgba(25,28,29,0.06)]'>
+            <CameraUploadIcon />
           </div>
           <p className='text-sm font-semibold text-[var(--color-text)]'>
             Add a photo of your meal

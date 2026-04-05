@@ -14,6 +14,8 @@ const ACTION_CONFIRMATIONS: Record<ActionType, string> = {
   ask_for_help: 'Thanks. Someone from your care team will follow up.',
 };
 
+const ACTION_ERROR_MESSAGE = 'We could not save that. Please try again.';
+
 export default function NudgeCard({ nudge, onActionComplete }: Props) {
   const [acting, setActing] = useState<ActionType | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
@@ -31,22 +33,11 @@ export default function NudgeCard({ nudge, onActionComplete }: Props) {
   }, []);
 
   function getActionErrorMessage(err: unknown): string {
-    if (err instanceof ApiError) {
-      if (err.status === 404) {
-        console.error('Nudge action endpoint returned 404', err.body);
-        return 'We could not save that. Please try again.';
-      }
-
-      if (err.status === 422) {
-        return 'We could not save that. Please try again.';
-      }
-
-      if (err.status === 0 || err.status >= 500) {
-        return 'We could not save that. Please try again.';
-      }
+    if (err instanceof ApiError && err.status === 404) {
+      console.error('Nudge action endpoint returned 404', err.body);
     }
 
-    return 'We could not save that. Please try again.';
+    return ACTION_ERROR_MESSAGE;
   }
 
   async function handleAction(actionType: ActionType) {

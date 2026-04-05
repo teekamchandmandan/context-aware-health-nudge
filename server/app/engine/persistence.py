@@ -82,7 +82,7 @@ def create_nudge_from_candidate(
         "SELECT goal_type FROM members WHERE id = ?",
         (member_id,),
     ).fetchone()["goal_type"]
-    nudge = phrasing.maybe_apply_llm_phrasing(
+    nudge, llm_metadata = phrasing.maybe_apply_llm_phrasing(
         conn,
         nudge_id,
         member_id=member_id,
@@ -99,5 +99,6 @@ def create_nudge_from_candidate(
         candidate,
         phrasing_source=nudge["phrasing_source"],
         escalation_decision=False,
+        llm_model_name=llm_metadata["model_name"] if llm_metadata is not None else None,
     )
     return {"state": "active", "nudge": dict(nudge)}

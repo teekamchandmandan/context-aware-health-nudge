@@ -1,15 +1,21 @@
 import base64
 import json
 
-import httpx
-
+from app.core.openai_chat import extract_message_content as _extract_message_content
+from app.core.openai_chat import extract_model_name as _extract_model_name
+from app.core.openai_chat import parse_json_output as _parse_json_output
+from app.core.openai_chat import request_chat_completion as _request_chat_completion
+from app.core.openai_chat import strip_code_fences as _strip_code_fences
 from app.core.config import MEAL_ANALYSIS_TIMEOUT_SECONDS, OPENAI_MODEL
 
 SYSTEM_PROMPT = (
-    "You extract structured meal details from a member's meal photo without any written description. "
-    "Return only JSON with meal_type, carbs_g, protein_g, analysis_summary, analysis_confidence, analysis_status, and analysis_source. "
-    "Use short, plain language. If you are uncertain, omit fields instead of inventing them. "
-    "This output may be saved directly on the meal log, so keep estimates cautious and clearly marked as approximate."
+    "You classify a meal photo using a cautious structured output. "
+    "Use only visible evidence from the image and do not rely on hidden ingredients, outside member context, or any written description. "
+    "Return exactly one JSON object with these keys: meal_profile and visible_food_summary. "
+    "meal_profile must be one of higher_carb, higher_protein, balanced, or unclear. "
+    "Use unclear when the image is blurry, cropped, occluded, mostly packaging, or does not support a confident classification. "
+    "visible_food_summary must be either null or one short factual sentence under 160 characters describing only visible food items. "
+    "Do not give advice, warnings, diagnoses, treatment suggestions, or coaching."
 )
 
 
@@ -18,7 +24,7 @@ def request_meal_analysis_json(
     *,
     photo_bytes: bytes | None,
     photo_content_type: str | None,
-) -> str:
+) -> tuple[str, str]:
     payload = {
         "model": OPENAI_MODEL,
         "temperature": 0.1,
@@ -35,19 +41,13 @@ def request_meal_analysis_json(
         ],
     }
 
-    with httpx.Client(timeout=MEAL_ANALYSIS_TIMEOUT_SECONDS) as client:
-        response = client.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-        )
-        response.raise_for_status()
-        body = response.json()
+    body = _request_chat_completion(
+        api_key=api_key,
+        payload=payload,
+        timeout_seconds=MEAL_ANALYSIS_TIMEOUT_SECONDS,
+    )
 
-    return extract_message_content(body)
+    return extract_message_content(body), extract_model_name(body)
 
 
 def build_user_content(
@@ -65,13 +65,8 @@ def build_user_content(
                 {
                     "input": "meal_photo_only",
                     "instructions": [
-                        "Use only details visible in the image.",
-                        "Do not rely on any member-written description because none is provided.",
-                        "Infer meal_type, carbs_g, and protein_g only when reasonably supported.",
-                        "Use analysis_status='estimated' when you include nutrition estimates.",
-                        "Use analysis_status='partial' when you are unsure or only have limited structure.",
-                        "Set analysis_source='llm'.",
-                        "Keep analysis_summary under 160 characters and mention that values may be approximate.",
+                        "Return meal_profile='unclear' when the image does not support a confident classification.",
+                        "Keep visible_food_summary factual and limited to visible food items only.",
                     ],
                 }
             ),
@@ -81,40 +76,28 @@ def build_user_content(
     content.append(
         {
             "type": "image_url",
-            "image_url": {"url": f"data:{photo_content_type};base64,{encoded}"},
+            "image_url": {"url": f"data:{photo_content_type};base64,{encoded}", "detail": "auto"},
         }
     )
     return content
 
 
 def extract_message_content(body: dict) -> str:
-    choices = body.get("choices") or []
-    if not choices:
-        raise ValueError("provider returned no choices")
-
-    message = choices[0].get("message") or {}
-    content = message.get("content")
-
-    if isinstance(content, str):
-        return strip_code_fences(content)
-
-    if isinstance(content, list):
-        text_parts: list[str] = []
-        for part in content:
-            if isinstance(part, dict) and part.get("type") == "text":
-                text = part.get("text")
-                if isinstance(text, str):
-                    text_parts.append(text)
-        if text_parts:
-            return strip_code_fences("".join(text_parts))
-
-    raise ValueError("provider returned no text content")
+    return _extract_message_content(
+        body,
+        text_item_types={"text"},
+        text_value_keys=("text",),
+        error_message="provider returned no text content",
+    )
 
 
 def strip_code_fences(content: str) -> str:
-    stripped = content.strip()
-    if stripped.startswith("```") and stripped.endswith("```"):
-        lines = stripped.splitlines()
-        if len(lines) >= 3:
-            return "\n".join(lines[1:-1]).strip()
-    return stripped
+    return _strip_code_fences(content)
+
+
+def extract_model_name(body: dict) -> str:
+    return _extract_model_name(body, OPENAI_MODEL)
+
+
+def parse_json_output(raw_content: str) -> dict:
+    return _parse_json_output(raw_content)

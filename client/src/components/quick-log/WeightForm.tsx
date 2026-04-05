@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type SyntheticEvent, useState } from 'react';
 import { ApiError, postSignal } from '../../api/client';
 import type { FormProps, WeightUnit } from './shared';
 import {
@@ -22,26 +22,28 @@ export default function WeightForm({
   const [weight, setWeight] = useState('');
   const [unit, setUnit] = useState<WeightUnit>('lb');
   const [fieldError, setFieldError] = useState<string | null>(null);
-  const canSubmit = parsePositiveNumber(weight) !== null;
+  const parsedWeight = parsePositiveNumber(weight);
+  const canSubmit = parsedWeight !== null;
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
     setFieldError(null);
 
-    const parsed = Number(weight);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
+    if (parsedWeight === null) {
       setFieldError('Enter a weight greater than 0.');
       return;
     }
 
     const weightLb =
-      unit === 'kg' ? Math.round(parsed * KG_TO_LB * 10) / 10 : parsed;
+      unit === 'kg'
+        ? Math.round(parsedWeight * KG_TO_LB * 10) / 10
+        : parsedWeight;
 
     setSubmitting(true);
     try {
       await postSignal(memberId, 'weight_logged', { weight_lb: weightLb });
-      onSuccess(`${parsed} ${unit} logged — nice work staying on track!`);
+      onSuccess(`${parsedWeight} ${unit} logged — nice work staying on track!`);
     } catch (error) {
       if (error instanceof ApiError && error.status === 422) {
         setFieldError(getValidationMessage(error) ?? 'Enter a valid weight.');

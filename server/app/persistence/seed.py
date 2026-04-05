@@ -62,14 +62,8 @@ def _seed(conn: sqlite3.Connection) -> None:
             "meal_logged",
             json.dumps(
                 {
-                    "meal_type": "dinner",
-                    "carbs_g": 72,
-                    "protein_g": 28,
-                    "photo_attached": True,
-                    "analysis_summary": "Estimated from the uploaded meal photo. Saved values may be approximate.",
-                    "analysis_confidence": 0.74,
-                    "analysis_status": "estimated",
-                    "analysis_source": "llm",
+                    "meal_profile": "higher_carb",
+                    "visible_food_summary": "The photo appears to show a pasta dish with bread.",
                 }
             ),
             _ts(now - timedelta(hours=6)),

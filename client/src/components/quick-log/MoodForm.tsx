@@ -1,14 +1,15 @@
-import { type FormEvent, useId, useState } from 'react';
+import { type SyntheticEvent, useId, useState } from 'react';
 import { ApiError, postSignal } from '../../api/client';
 import type { MoodValue } from '../../types/member';
 import type { FormProps } from './shared';
 import {
   getRequestErrorMessage,
   getValidationMessage,
+  MOOD_LABELS,
   MOOD_OPTIONS,
   PRIMARY_BUTTON_CLASSES,
 } from './shared';
-import MoodOption, { MOOD_LABELS } from './MoodOption';
+import MoodOption from './MoodOption';
 
 export default function MoodForm({
   memberId,
@@ -26,12 +27,10 @@ export default function MoodForm({
 
   function handleMoodSelect(nextMood: MoodValue) {
     setMood(nextMood);
-    if (fieldError) {
-      setFieldError(null);
-    }
+    setFieldError(null);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
     setFieldError(null);

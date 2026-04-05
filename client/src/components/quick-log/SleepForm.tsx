@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type SyntheticEvent, useState } from 'react';
 import { ApiError, postSignal } from '../../api/client';
 import type { FormProps } from './shared';
 import {
@@ -19,25 +19,24 @@ export default function SleepForm({
 }: FormProps) {
   const [hours, setHours] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
-  const parsedHours = parsePositiveNumber(hours);
-  const canSubmit = parsedHours !== null && parsedHours <= 24;
+  const parsedHours = parsePositiveNumber(hours, 24);
+  const canSubmit = parsedHours !== null;
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
     setFieldError(null);
 
-    const parsed = Number(hours);
-    if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 24) {
-      setFieldError('Enter hours between 0 and 24.');
+    if (parsedHours === null) {
+      setFieldError('Enter hours greater than 0 and up to 24.');
       return;
     }
 
     setSubmitting(true);
     try {
-      await postSignal(memberId, 'sleep_logged', { sleep_hours: parsed });
+      await postSignal(memberId, 'sleep_logged', { sleep_hours: parsedHours });
       onSuccess(
-        `${parsed}h logged — sleep tracking helps us personalise your plan.`,
+        `${parsedHours}h logged — sleep tracking helps us personalise your plan.`,
       );
     } catch (error) {
       if (error instanceof ApiError && error.status === 422) {
@@ -68,7 +67,7 @@ export default function SleepForm({
             name='sleep_hours'
             type='number'
             step='0.5'
-            min='0'
+            min='0.5'
             max='24'
             inputMode='decimal'
             autoComplete='off'
