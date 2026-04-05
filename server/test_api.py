@@ -104,7 +104,7 @@ def test_member_nudge_llm_success():
         "app.phrasing._request_llm_json",
         return_value=(
             '{"content":"Try a lighter dinner tonight to stay aligned with your goal.","explanation":"You logged a higher-carb meal today and your goal is low carb."}',
-            "gpt-4.1-mini-test-api",
+            "gpt-5-mini-test-api",
         ),
     ):
         r = client.get("/api/members/member_meal_01/nudge")
@@ -143,7 +143,7 @@ def test_member_nudge_llm_idempotent_reads():
         calls["count"] += 1
         return (
             '{"content":"Try a lighter dinner tonight to stay aligned.","explanation":"You logged a higher-carb meal today and your goal is low carb."}',
-            "gpt-4.1-mini-test-idempotent-api",
+            "gpt-5-mini-test-idempotent-api",
         )
 
     with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
@@ -165,7 +165,7 @@ def test_coach_nudges_show_llm_source():
         "app.phrasing._request_llm_json",
         return_value=(
             '{"content":"Try a lighter dinner tonight to stay aligned with your goal.","explanation":"You logged a higher-carb meal today and your goal is low carb."}',
-            "gpt-4.1-mini-test-coach",
+            "gpt-5-mini-test-coach",
         ),
     ):
         client.get("/api/members/member_meal_01/nudge")
@@ -349,7 +349,7 @@ def test_meal_analysis_provider_uses_photo_only_payload():
         return_value=(
             '{"meal_profile":"higher_carb",'
             '"visible_food_summary":"The photo appears to show a pasta dish with bread."}',
-            "gpt-4.1-mini-test-meal",
+            "gpt-5-mini-test-meal",
         ),
     ) as mocked_request:
         analysis = create_meal_draft(
@@ -379,7 +379,7 @@ def test_meal_analysis_llm_audit_records_model_name():
         return_value=(
             '{"meal_profile":"higher_carb",'
             '"visible_food_summary":"The photo appears to show a pasta dish with bread."}',
-            "gpt-4.1-mini-test-meal-audit",
+            "gpt-5-mini-test-meal-audit",
         ),
     ):
         r = client.post(
@@ -392,7 +392,7 @@ def test_meal_analysis_llm_audit_records_model_name():
     ok("llm_call audit recorded", payload is not None)
     if payload:
         ok("prompt_area is meal_analysis", payload["prompt_area"] == "meal_analysis", f"got {payload['prompt_area']}")
-        ok("model_name recorded", payload["model_name"] == "gpt-4.1-mini-test-meal-audit", f"got {payload['model_name']}")
+        ok("model_name recorded", payload["model_name"] == "gpt-5-mini-test-meal-audit", f"got {payload['model_name']}")
         ok("llm_call marked successful", payload["success"] is True, f"got {payload['success']}")
 
 
@@ -462,7 +462,7 @@ def test_meal_analysis_invalid_json_records_audit():
 
     with patch("app.meal_analysis.get_openai_api_key", return_value="test-key"), patch(
         "app.meal_analysis._request_meal_analysis_json",
-        return_value=("not-json", "gpt-4.1-mini-test-meal-invalid-json"),
+        return_value=("not-json", "gpt-5-mini-test-meal-invalid-json"),
     ):
         r = client.post(
             "/api/members/member_meal_01/meal-logs",
@@ -474,7 +474,7 @@ def test_meal_analysis_invalid_json_records_audit():
     ok("llm_fallback audit recorded", fallback_payload is not None)
     if fallback_payload:
         ok("fallback reason is invalid_json", fallback_payload["fallback_reason"] == "invalid_json", f"got {fallback_payload['fallback_reason']}")
-        ok("invalid json model_name recorded", fallback_payload["model_name"] == "gpt-4.1-mini-test-meal-invalid-json", f"got {fallback_payload['model_name']}")
+        ok("invalid json model_name recorded", fallback_payload["model_name"] == "gpt-5-mini-test-meal-invalid-json", f"got {fallback_payload['model_name']}")
 
 
 def test_meal_analysis_validation_failure_records_audit():
@@ -486,7 +486,7 @@ def test_meal_analysis_validation_failure_records_audit():
         return_value=(
             '{"meal_profile":"breakfasty",'
             '"visible_food_summary":"The photo appears to show a plated meal."}',
-            "gpt-4.1-mini-test-meal-validation",
+            "gpt-5-mini-test-meal-validation",
         ),
     ):
         r = client.post(
@@ -505,7 +505,7 @@ def test_meal_analysis_validation_failure_records_audit():
         )
         ok(
             "validation failure model_name recorded",
-            fallback_payload["model_name"] == "gpt-4.1-mini-test-meal-validation",
+            fallback_payload["model_name"] == "gpt-5-mini-test-meal-validation",
             f"got {fallback_payload['model_name']}",
         )
 

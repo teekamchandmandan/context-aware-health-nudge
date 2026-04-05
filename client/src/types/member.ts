@@ -5,6 +5,16 @@ export type SignalType = 'weight_logged' | 'mood_logged' | 'sleep_logged';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type MoodValue = 'low' | 'neutral' | 'high';
 
+// Latest signals (per-type most-recent entry)
+export interface LatestSignalEntry {
+  payload: Record<string, unknown>;
+  logged_at: string;
+}
+
+export type LatestSignalsResponse = Partial<
+  Record<SignalType, LatestSignalEntry>
+>;
+
 // Responses
 export interface MemberRef {
   id: string;
