@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchLatestSignals } from '../api/client';
 import type { LatestSignalsResponse } from '../types/member';
 import { formatTimestamp } from '../utils/formatTimestamp';
@@ -20,6 +20,7 @@ interface Props {
 export default function QuickLog({ memberId, onSignalSubmitted }: Props) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [latest, setLatest] = useState<LatestSignalsResponse>({});
+  const refreshControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -33,8 +34,11 @@ export default function QuickLog({ memberId, onSignalSubmitted }: Props) {
     (message: string) => {
       setToasts((prev) => [...prev, { id: createToastId(), message }]);
       onSignalSubmitted();
-      // Refresh latest signals after a new log
-      fetchLatestSignals(memberId)
+      // Cancel any in-flight refresh, then start a new one
+      refreshControllerRef.current?.abort();
+      const ac = new AbortController();
+      refreshControllerRef.current = ac;
+      fetchLatestSignals(memberId, ac.signal)
         .then(setLatest)
         .catch(() => {});
     },
@@ -100,9 +104,9 @@ export default function QuickLog({ memberId, onSignalSubmitted }: Props) {
           eyebrow='Mood'
           title='How are you feeling?'
           subtitle={lastLoggedText(
-            MOOD_LABELS[
-              lastMood?.payload?.mood as keyof typeof MOOD_LABELS
-            ]?.toLowerCase() ?? (lastMood?.payload?.mood as string),
+            lastMood?.payload?.mood
+              ? (MOOD_LABELS[lastMood.payload.mood] ?? lastMood.payload.mood).toLowerCase()
+              : '',
             lastMood?.logged_at,
           )}
           apiError={mood.apiError}

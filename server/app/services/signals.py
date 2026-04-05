@@ -21,18 +21,22 @@ def get_latest_signals(
     placeholders = ",".join("?" for _ in _LATEST_SIGNAL_TYPES)
     rows = conn.execute(
         f"""
-        SELECT s.signal_type, s.payload_json, s.created_at
-        FROM signals s
-        INNER JOIN (
-            SELECT signal_type, MAX(created_at) AS max_ts
+        SELECT signal_type, payload_json, created_at
+        FROM (
+            SELECT
+                signal_type,
+                payload_json,
+                created_at,
+                ROW_NUMBER() OVER (
+                    PARTITION BY signal_type
+                    ORDER BY created_at DESC, id DESC
+                ) AS rn
             FROM signals
             WHERE member_id = ? AND signal_type IN ({placeholders})
-            GROUP BY signal_type
-        ) latest ON s.signal_type = latest.signal_type
-                  AND s.created_at = latest.max_ts
-                  AND s.member_id = ?
+        ) latest
+        WHERE rn = 1
         """,
-        (member_id, *_LATEST_SIGNAL_TYPES, member_id),
+        (member_id, *_LATEST_SIGNAL_TYPES),
     ).fetchall()
 
     result: dict[str, dict] = {}

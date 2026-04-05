@@ -711,6 +711,63 @@ def test_signal_404_unknown_member():
     ok("404 for unknown member", r.status_code == 404, f"got {r.status_code}")
 
 
+# ── GET /api/members/{member_id}/signals/latest ──────────────────────────────
+
+def test_signals_latest():
+    section("GET /signals/latest — returns latest per-type entries")
+    seed()
+    member_id = "member_meal_01"
+
+    # member_meal_01 has only a meal_logged signal seeded → no tracked types present
+    r0 = client.get(f"/api/members/{member_id}/signals/latest")
+    ok("status 200 on empty tracked types", r0.status_code == 200, f"got {r0.status_code}")
+    ok("no weight/sleep/mood entries initially", r0.json() == {}, f"got {r0.json()}")
+
+    # Post a weight signal
+    client.post(f"/api/members/{member_id}/signals", json={
+        "signal_type": "weight_logged",
+        "payload": {"weight_lb": 180.5}
+    })
+    r1 = client.get(f"/api/members/{member_id}/signals/latest")
+    ok("status 200 after weight post", r1.status_code == 200)
+    data1 = r1.json()
+    ok("weight_logged present", "weight_logged" in data1, f"keys: {list(data1.keys())}")
+    ok("sleep_logged absent", "sleep_logged" not in data1)
+    ok("mood_logged absent", "mood_logged" not in data1)
+    ok("weight_lb is 180.5", data1["weight_logged"]["payload"]["weight_lb"] == 180.5,
+       f"got {data1['weight_logged']['payload']}")
+    ok("logged_at present", "logged_at" in data1["weight_logged"])
+
+    # Post a newer weight — only the latest should be returned
+    client.post(f"/api/members/{member_id}/signals", json={
+        "signal_type": "weight_logged",
+        "payload": {"weight_lb": 185.0}
+    })
+    r2 = client.get(f"/api/members/{member_id}/signals/latest")
+    ok("only latest weight returned", r2.json()["weight_logged"]["payload"]["weight_lb"] == 185.0,
+       f"got {r2.json()['weight_logged']['payload']}")
+
+    # Post sleep and mood signals
+    client.post(f"/api/members/{member_id}/signals", json={
+        "signal_type": "sleep_logged",
+        "payload": {"sleep_hours": 7.5}
+    })
+    client.post(f"/api/members/{member_id}/signals", json={
+        "signal_type": "mood_logged",
+        "payload": {"mood": "high"}
+    })
+    r3 = client.get(f"/api/members/{member_id}/signals/latest")
+    data3 = r3.json()
+    ok("all three types present", all(k in data3 for k in ("weight_logged", "sleep_logged", "mood_logged")),
+       f"keys: {list(data3.keys())}")
+    ok("sleep_hours correct", data3["sleep_logged"]["payload"]["sleep_hours"] == 7.5)
+    ok("mood correct", data3["mood_logged"]["payload"]["mood"] == "high")
+
+    # 404 for unknown member
+    r404 = client.get("/api/members/nonexistent/signals/latest")
+    ok("404 for unknown member", r404.status_code == 404, f"got {r404.status_code}")
+
+
 # ── GET /api/coach/nudges ───────────────────────────────────────────────────
 
 def test_coach_nudges():
@@ -834,6 +891,7 @@ if __name__ == "__main__":
         test_signal_422_missing_required,
         test_signal_422_unknown_type,
         test_signal_404_unknown_member,
+        test_signals_latest,
         test_coach_nudges,
         test_coach_nudges_show_llm_source,
         test_coach_nudges_limit,
