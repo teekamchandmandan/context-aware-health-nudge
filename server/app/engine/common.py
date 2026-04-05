@@ -28,7 +28,7 @@ class NudgeCandidate(BaseModel):
     escalation_recommended: bool
     source_signal_ids: list[str]
     priority: int
-    latest_signal_ts: str = ""
+    latest_signal_ts: str | None = None
 
 
 def _now() -> datetime:
