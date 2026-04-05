@@ -11,6 +11,24 @@ import CoachEscalationsList from '../components/CoachEscalationsList';
 import Spinner from '../components/Spinner';
 import SectionError from '../components/SectionError';
 
+function getEscalationSummary(
+  escalationsLoading: boolean,
+  openCount: number,
+): string {
+  if (escalationsLoading) {
+    return 'Checking for open escalations…';
+  }
+
+  if (openCount === 0) {
+    return 'All members are on track. No open escalations right now.';
+  }
+
+  const noun = openCount === 1 ? 'escalation' : 'escalations';
+  const verb = openCount === 1 ? 'needs' : 'need';
+
+  return `You have ${openCount} open ${noun} that ${verb} attention.`;
+}
+
 export default function CoachPage() {
   const [nudges, setNudges] = useState<CoachNudgeItem[]>([]);
   const [escalations, setEscalations] = useState<CoachEscalationItem[]>([]);
@@ -62,6 +80,7 @@ export default function CoachPage() {
   }
 
   const openCount = escalations.length;
+  const coachSummary = getEscalationSummary(escalationsLoading, openCount);
 
   return (
     <div className='min-h-screen text-[var(--color-text)]'>
@@ -120,11 +139,7 @@ export default function CoachPage() {
             Good to see you, Coach
           </h1>
           <p className='mt-3 max-w-2xl text-base leading-8 text-[var(--color-muted)] sm:text-lg'>
-            {escalationsLoading
-              ? 'Checking for open escalations…'
-              : openCount === 0
-                ? 'All members are on track. No open escalations right now.'
-                : `You have ${openCount} open escalation${openCount === 1 ? '' : 's'} that need${openCount === 1 ? 's' : ''} attention.`}
+            {coachSummary}
           </p>
         </section>
 
