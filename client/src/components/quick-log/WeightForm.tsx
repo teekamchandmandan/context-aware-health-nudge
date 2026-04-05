@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type SyntheticEvent, useState } from 'react';
 import { ApiError, postSignal } from '../../api/client';
 import type { FormProps, WeightUnit } from './shared';
 import {
@@ -25,7 +25,7 @@ export default function WeightForm({
   const parsedWeight = parsePositiveNumber(weight);
   const canSubmit = parsedWeight !== null;
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
     setFieldError(null);

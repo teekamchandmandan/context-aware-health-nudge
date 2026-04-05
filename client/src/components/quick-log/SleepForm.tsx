@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type SyntheticEvent, useState } from 'react';
 import { ApiError, postSignal } from '../../api/client';
 import type { FormProps } from './shared';
 import {
@@ -22,7 +22,7 @@ export default function SleepForm({
   const parsedHours = parsePositiveNumber(hours, 24);
   const canSubmit = parsedHours !== null;
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
     setFieldError(null);

@@ -1,4 +1,4 @@
-import { type FormEvent, useId, useState } from 'react';
+import { type SyntheticEvent, useId, useState } from 'react';
 import { ApiError, postSignal } from '../../api/client';
 import type { MoodValue } from '../../types/member';
 import type { FormProps } from './shared';
@@ -30,7 +30,7 @@ export default function MoodForm({
     setFieldError(null);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
     setFieldError(null);
