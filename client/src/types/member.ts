@@ -93,6 +93,7 @@ export interface CoachNudgeItem {
   matched_reason: string | null;
   confidence: number | null;
   confidence_factors: ConfidenceFactor[] | null;
+  confidence_summary: string | null;
   escalation_recommended: boolean;
   status: string;
   latest_action: string | null;
