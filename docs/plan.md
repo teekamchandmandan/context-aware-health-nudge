@@ -80,8 +80,8 @@ The app is a local-first prototype with a thin app assembly layer and explicit p
 
 The current engine uses three explicit evaluators.
 
-| Evaluator                  | Trigger                                                                                                                  | Confidence | Outcome                        |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------- | ------------------------------ |
+| Evaluator                  | Trigger                                                                                                                  | Confidence                      | Outcome                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------- | ------------------------------ |
 | `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent `meal_logged` signal in the last 24 hours has `meal_profile = higher_carb` | `0.70` base, computed 0.62–0.90 | Active `meal_guidance` nudge   |
 | `check_missing_weight_log` | No `weight_logged` signal in the last 4 days                                                                             | `0.50` base, computed 0.50–0.76 | Active `weight_check_in` nudge |
 | `check_support_risk`       | Most recent mood in the last 3 days is `low` and there have been at least 2 dismissals in the last 7 days                | `0.25` base, capped at 0.48     | Escalated `support_risk` path  |

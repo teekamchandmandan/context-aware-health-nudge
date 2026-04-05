@@ -25,12 +25,12 @@ After `make dev`, open `http://localhost:5173/member` for the member experience 
 
 The database is pre-loaded with four members representing distinct states:
 
-| Member           | Signal                                    | Nudge trigger                                                                                                                                              |
-| ---------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Alice Chen**   | Logged a pasta-and-bread meal             | Higher-carb meal against a low-carb goal → meal guidance nudge (computed confidence, typically 0.78–0.90 depending on recency and classification clarity)                                                                           |
-| **Bob Martinez** | No weight log in 7 days                   | Missing weight log → weight check-in nudge (computed confidence, typically 0.50–0.76 depending on overdue severity and recent activity)                                                                                               |
+| Member           | Signal                                    | Nudge trigger                                                                                                                                                                                    |
+| ---------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Alice Chen**   | Logged a pasta-and-bread meal             | Higher-carb meal against a low-carb goal → meal guidance nudge (computed confidence, typically 0.78–0.90 depending on recency and classification clarity)                                        |
+| **Bob Martinez** | No weight log in 7 days                   | Missing weight log → weight check-in nudge (computed confidence, typically 0.50–0.76 depending on overdue severity and recent activity)                                                          |
 | **Carol Davis**  | Logged "low" mood                         | Low mood signal → support escalation nudge (escalation recommended, computed confidence hard-capped below 0.48 for safety). Historical acted and dismissed nudges are visible in the coach view. |
-| **Diego Rivera** | Recent weight log, no out-of-range signal | No active nudge — demonstrates the all-good / no-nudge state                                                                                               |
+| **Diego Rivera** | Recent weight log, no out-of-range signal | No active nudge — demonstrates the all-good / no-nudge state                                                                                                                                     |
 
 Switch between members using the member switcher in the top-right corner of both views.
 

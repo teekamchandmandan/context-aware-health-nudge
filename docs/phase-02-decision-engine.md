@@ -42,10 +42,10 @@ The assignment is easier to trust if nudge creation is explainable before any AP
 
 ## Default Evaluator Rules
 
-| Evaluator                  | Trigger                                                                                                  | Candidate type    | Default confidence |
-| -------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------- | ------------------ |
-| `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent meal in the last 24 hours has `meal_profile = higher_carb` | `meal_guidance`   | `0.70` base (computed 0.62–0.90) |
-| `check_missing_weight_log` | No `weight_logged` signal in the last 4 full UTC days                                                    | `weight_check_in` | `0.50` base (computed 0.50–0.76) |
+| Evaluator                  | Trigger                                                                                                  | Candidate type    | Default confidence                |
+| -------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------- |
+| `check_meal_goal_mismatch` | Member goal is `low_carb` and the most recent meal in the last 24 hours has `meal_profile = higher_carb` | `meal_guidance`   | `0.70` base (computed 0.62–0.90)  |
+| `check_missing_weight_log` | No `weight_logged` signal in the last 4 full UTC days                                                    | `weight_check_in` | `0.50` base (computed 0.50–0.76)  |
 | `check_support_risk`       | `mood_logged.mood == "low"` in the last 3 days and at least 2 `dismiss` actions in the last 7 days       | `support_risk`    | `0.25` base (hard-capped at 0.48) |
 
 These base values are starting points. Computed confidence applies evidence-weighted adjustments (recency, classification clarity, overdue severity, member engagement, and dismissal patterns) documented in `server/app/engine/confidence.py`. Each adjustment is recorded as a named factor for auditability. If base values change, update this file and `docs/plan.md` together.

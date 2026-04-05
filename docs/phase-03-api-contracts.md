@@ -68,9 +68,13 @@ Successful responses should always include a `state` field.
     "matched_reason": "meal_goal_mismatch",
     "confidence": 0.82,
     "confidence_factors": [
-      {"name": "base", "value": 0.70, "label": "Goal–meal mismatch matched"},
-      {"name": "recency", "value": 0.04, "label": "Meal logged 5h ago"},
-      {"name": "clarity", "value": 0.08, "label": "Classification clear (higher_carb)"}
+      { "name": "base", "value": 0.7, "label": "Goal–meal mismatch matched" },
+      { "name": "recency", "value": 0.04, "label": "Meal logged 5h ago" },
+      {
+        "name": "clarity",
+        "value": 0.08,
+        "label": "Classification clear (higher_carb)"
+      }
     ],
     "escalation_recommended": false,
     "status": "active",
