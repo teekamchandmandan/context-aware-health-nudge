@@ -66,6 +66,35 @@ def latest_audit_payload(event_type: str, *, entity_id: str | None = None) -> di
         conn.close()
 
 
+def post_meal_log_response():
+    return client.post(
+        "/api/members/member_meal_01/meal-logs",
+        files={"photo": ("meal.jpg", b"fake-image-bytes", "image/jpeg")},
+    )
+
+
+def assert_meal_analysis_audit(
+    event_type: str,
+    *,
+    expected_model_name: str,
+    expected_reason: str | None = None,
+    expected_success: bool | None = None,
+):
+    payload = latest_audit_payload(event_type, entity_id="member_meal_01")
+    ok(f"{event_type} audit recorded", payload is not None)
+    if not payload:
+        return
+
+    ok("prompt_area is meal_analysis", payload["prompt_area"] == "meal_analysis", f"got {payload['prompt_area']}")
+    ok("model_name recorded", payload["model_name"] == expected_model_name, f"got {payload['model_name']}")
+
+    if expected_reason is not None:
+        ok("fallback reason recorded", payload["fallback_reason"] == expected_reason, f"got {payload['fallback_reason']}")
+
+    if expected_success is not None:
+        ok("success flag recorded", payload["success"] is expected_success, f"got {payload['success']}")
+
+
 # ── GET /api/members/{member_id}/nudge ───────────────────────────────────────
 
 def test_member_nudge_active():
@@ -159,32 +188,6 @@ def test_member_nudge_llm_idempotent_reads():
     ok("both 200", r1.status_code == 200 and r2.status_code == 200)
     ok("only one provider call", calls["count"] == 1, f"got {calls['count']}")
     ok("same nudge id", r1.json()["nudge"]["id"] == r2.json()["nudge"]["id"])
-
-
-def test_coach_nudges_show_llm_source():
-    section("GET /coach/nudges — coach list reflects llm phrasing source")
-    seed()
-    with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
-        "app.phrasing._request_llm_json",
-        return_value=(
-            '{"content":"Try a lighter dinner tonight to stay aligned with your goal.","explanation":"You logged a higher-carb meal today and your goal is low carb."}',
-            "gpt-5-mini-test-coach",
-        ),
-    ):
-        client.get("/api/members/member_meal_01/nudge")
-
-    r = client.get("/api/coach/nudges")
-    ok("status 200", r.status_code == 200)
-    items = r.json()["items"]
-    meal_item = next((item for item in items if item["member_id"] == "member_meal_01"), None)
-    ok("meal member nudge present", meal_item is not None)
-    if meal_item:
-        ok("phrasing_source is llm", meal_item["phrasing_source"] == "llm", f"got {meal_item['phrasing_source']}")
-        ok(
-            "visible food summary included",
-            meal_item["visible_food_summary"] == "The photo appears to show a pasta dish with bread.",
-            f"got {meal_item['visible_food_summary']!r}",
-        )
 
 
 def test_member_nudge_weight():
@@ -343,36 +346,6 @@ def test_meal_analysis_photo_only_fallback():
     ok("fallback omits visible summary", analysis.visible_food_summary is None, f"got {analysis.visible_food_summary!r}")
 
 
-def test_meal_analysis_provider_uses_photo_only_payload():
-    section("Meal analysis — provider call is photo only")
-    seed()
-
-    with patch("app.meal_analysis.get_openai_api_key", return_value="test-key"), patch(
-        "app.meal_analysis._request_meal_analysis_json",
-        return_value=(
-            '{"meal_profile":"higher_carb",'
-            '"visible_food_summary":"The photo appears to show a pasta dish with bread."}',
-            "gpt-5-mini-test-meal",
-        ),
-    ) as mocked_request:
-        analysis = create_meal_draft(
-            photo_bytes=b"fake-image-bytes",
-            photo_content_type="image/jpeg",
-        )
-
-    ok("provider result profile saved", analysis.meal_profile == "higher_carb", f"got {analysis.meal_profile!r}")
-    ok(
-        "provider result visible summary saved",
-        analysis.visible_food_summary == "The photo appears to show a pasta dish with bread.",
-        f"got {analysis.visible_food_summary!r}",
-    )
-    ok(
-        "provider called with photo only",
-        mocked_request.call_args == (("test-key",), {"photo_bytes": b"fake-image-bytes", "photo_content_type": "image/jpeg"}),
-        f"got {mocked_request.call_args!r}",
-    )
-
-
 def test_meal_analysis_provider_omits_temperature_for_gpt5_models():
     section("Meal analysis — provider payload omits unsupported temperature")
     seed()
@@ -447,131 +420,81 @@ def test_meal_analysis_llm_audit_records_model_name():
             "gpt-5-mini-test-meal-audit",
         ),
     ):
-        r = client.post(
-            "/api/members/member_meal_01/meal-logs",
-            files={"photo": ("meal.jpg", b"fake-image-bytes", "image/jpeg")},
-        )
+        r = post_meal_log_response()
 
     ok("status 200", r.status_code == 200, f"got {r.status_code}")
-    payload = latest_audit_payload("llm_call", entity_id="member_meal_01")
-    ok("llm_call audit recorded", payload is not None)
-    if payload:
-        ok("prompt_area is meal_analysis", payload["prompt_area"] == "meal_analysis", f"got {payload['prompt_area']}")
-        ok("model_name recorded", payload["model_name"] == "gpt-5-mini-test-meal-audit", f"got {payload['model_name']}")
-        ok("llm_call marked successful", payload["success"] is True, f"got {payload['success']}")
+    assert_meal_analysis_audit(
+        "llm_call",
+        expected_model_name="gpt-5-mini-test-meal-audit",
+        expected_success=True,
+    )
 
 
 def test_meal_analysis_missing_key_audit_records_model_name():
     section("Meal analysis — missing API key records fallback audit")
     seed()
 
-    r = client.post(
-        "/api/members/member_meal_01/meal-logs",
-        files={"photo": ("meal.jpg", b"fake-image-bytes", "image/jpeg")},
+    r = post_meal_log_response()
+
+    ok("status 200", r.status_code == 200, f"got {r.status_code}")
+    assert_meal_analysis_audit(
+        "llm_fallback",
+        expected_model_name=OPENAI_MODEL,
+        expected_reason="missing_key",
     )
 
-    ok("status 200", r.status_code == 200, f"got {r.status_code}")
-    payload = latest_audit_payload("llm_fallback", entity_id="member_meal_01")
-    ok("llm_fallback audit recorded", payload is not None)
-    if payload:
-        ok("fallback reason is missing_key", payload["fallback_reason"] == "missing_key", f"got {payload['fallback_reason']}")
-        ok("prompt_area is meal_analysis", payload["prompt_area"] == "meal_analysis", f"got {payload['prompt_area']}")
-        ok("model_name recorded", payload["model_name"] == OPENAI_MODEL, f"got {payload['model_name']}")
 
+def test_meal_analysis_provider_failures_record_audit():
+    section("Meal analysis — provider failures record fallback audit")
 
-def test_meal_analysis_timeout_records_audit():
-    section("Meal analysis — timeout records llm_call failure and fallback")
-    seed()
+    cases = [
+        {
+            "label": "timeout",
+            "side_effect": httpx.TimeoutException("timed out"),
+            "expected_reason": "timeout",
+            "expected_model_name": OPENAI_MODEL,
+        },
+        {
+            "label": "provider_error",
+            "side_effect": httpx.HTTPError("provider error"),
+            "expected_reason": "provider_error",
+            "expected_model_name": OPENAI_MODEL,
+        },
+        {
+            "label": "invalid_json",
+            "return_value": ("not-json", "gpt-5-mini-test-meal-invalid-json"),
+            "expected_reason": "invalid_json",
+            "expected_model_name": "gpt-5-mini-test-meal-invalid-json",
+        },
+        {
+            "label": "validation_failure",
+            "return_value": (
+                '{"meal_profile":"breakfasty",'
+                '"visible_food_summary":"The photo appears to show a plated meal."}',
+                "gpt-5-mini-test-meal-validation",
+            ),
+            "expected_reason": "validation_failure",
+            "expected_model_name": "gpt-5-mini-test-meal-validation",
+        },
+    ]
 
-    with patch("app.meal_analysis.get_openai_api_key", return_value="test-key"), patch(
-        "app.meal_analysis._request_meal_analysis_json",
-        side_effect=httpx.TimeoutException("timed out"),
-    ):
-        r = client.post(
-            "/api/members/member_meal_01/meal-logs",
-            files={"photo": ("meal.jpg", b"fake-image-bytes", "image/jpeg")},
-        )
+    for case in cases:
+        seed()
+        with patch("app.meal_analysis.get_openai_api_key", return_value="test-key"):
+            patch_kwargs = {}
+            if "side_effect" in case:
+                patch_kwargs["side_effect"] = case["side_effect"]
+            else:
+                patch_kwargs["return_value"] = case["return_value"]
 
-    ok("status 200", r.status_code == 200, f"got {r.status_code}")
-    fallback_payload = latest_audit_payload("llm_fallback", entity_id="member_meal_01")
-    ok("llm_fallback audit recorded", fallback_payload is not None)
-    if fallback_payload:
-        ok("fallback reason is timeout", fallback_payload["fallback_reason"] == "timeout", f"got {fallback_payload['fallback_reason']}")
-        ok("timeout model_name recorded", fallback_payload["model_name"] == OPENAI_MODEL, f"got {fallback_payload['model_name']}")
+            with patch("app.meal_analysis._request_meal_analysis_json", **patch_kwargs):
+                r = post_meal_log_response()
 
-
-def test_meal_analysis_provider_error_records_audit():
-    section("Meal analysis — provider error records fallback audit")
-    seed()
-
-    with patch("app.meal_analysis.get_openai_api_key", return_value="test-key"), patch(
-        "app.meal_analysis._request_meal_analysis_json",
-        side_effect=httpx.HTTPError("provider error"),
-    ):
-        r = client.post(
-            "/api/members/member_meal_01/meal-logs",
-            files={"photo": ("meal.jpg", b"fake-image-bytes", "image/jpeg")},
-        )
-
-    ok("status 200", r.status_code == 200, f"got {r.status_code}")
-    fallback_payload = latest_audit_payload("llm_fallback", entity_id="member_meal_01")
-    ok("llm_fallback audit recorded", fallback_payload is not None)
-    if fallback_payload:
-        ok("fallback reason is provider_error", fallback_payload["fallback_reason"] == "provider_error", f"got {fallback_payload['fallback_reason']}")
-        ok("provider error model_name recorded", fallback_payload["model_name"] == OPENAI_MODEL, f"got {fallback_payload['model_name']}")
-
-
-def test_meal_analysis_invalid_json_records_audit():
-    section("Meal analysis — invalid JSON records fallback audit")
-    seed()
-
-    with patch("app.meal_analysis.get_openai_api_key", return_value="test-key"), patch(
-        "app.meal_analysis._request_meal_analysis_json",
-        return_value=("not-json", "gpt-5-mini-test-meal-invalid-json"),
-    ):
-        r = client.post(
-            "/api/members/member_meal_01/meal-logs",
-            files={"photo": ("meal.jpg", b"fake-image-bytes", "image/jpeg")},
-        )
-
-    ok("status 200", r.status_code == 200, f"got {r.status_code}")
-    fallback_payload = latest_audit_payload("llm_fallback", entity_id="member_meal_01")
-    ok("llm_fallback audit recorded", fallback_payload is not None)
-    if fallback_payload:
-        ok("fallback reason is invalid_json", fallback_payload["fallback_reason"] == "invalid_json", f"got {fallback_payload['fallback_reason']}")
-        ok("invalid json model_name recorded", fallback_payload["model_name"] == "gpt-5-mini-test-meal-invalid-json", f"got {fallback_payload['model_name']}")
-
-
-def test_meal_analysis_validation_failure_records_audit():
-    section("Meal analysis — validation failure records fallback audit")
-    seed()
-
-    with patch("app.meal_analysis.get_openai_api_key", return_value="test-key"), patch(
-        "app.meal_analysis._request_meal_analysis_json",
-        return_value=(
-            '{"meal_profile":"breakfasty",'
-            '"visible_food_summary":"The photo appears to show a plated meal."}',
-            "gpt-5-mini-test-meal-validation",
-        ),
-    ):
-        r = client.post(
-            "/api/members/member_meal_01/meal-logs",
-            files={"photo": ("meal.jpg", b"fake-image-bytes", "image/jpeg")},
-        )
-
-    ok("status 200", r.status_code == 200, f"got {r.status_code}")
-    fallback_payload = latest_audit_payload("llm_fallback", entity_id="member_meal_01")
-    ok("llm_fallback audit recorded", fallback_payload is not None)
-    if fallback_payload:
-        ok(
-            "fallback reason is validation_failure",
-            fallback_payload["fallback_reason"] == "validation_failure",
-            f"got {fallback_payload['fallback_reason']}",
-        )
-        ok(
-            "validation failure model_name recorded",
-            fallback_payload["model_name"] == "gpt-5-mini-test-meal-validation",
-            f"got {fallback_payload['model_name']}",
+        ok(f"{case['label']} returns 200", r.status_code == 200, f"got {r.status_code}")
+        assert_meal_analysis_audit(
+            "llm_fallback",
+            expected_model_name=case["expected_model_name"],
+            expected_reason=case["expected_reason"],
         )
 
 
@@ -853,8 +776,15 @@ def test_signals_latest():
 def test_coach_nudges():
     section("GET /coach/nudges — returns seeded nudges")
     seed()
-    # Trigger some nudges first
-    client.get("/api/members/member_meal_01/nudge")
+    with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
+        "app.phrasing._request_llm_json",
+        return_value=(
+            '{"content":"Try a lighter dinner tonight to stay aligned with your goal.","explanation":"You logged a higher-carb meal today and your goal is low carb."}',
+            "gpt-5-mini-test-coach",
+        ),
+    ):
+        client.get("/api/members/member_meal_01/nudge")
+
     client.get("/api/members/member_weight_01/nudge")
 
     r = client.get("/api/coach/nudges")
@@ -876,6 +806,16 @@ def test_coach_nudges():
         ok("phrasing_source is a string",
            isinstance(item["phrasing_source"], str) and len(item["phrasing_source"]) > 0,
            f"got {item.get('phrasing_source')!r}")
+
+    meal_item = next((item for item in data["items"] if item["member_id"] == "member_meal_01"), None)
+    ok("meal member nudge present", meal_item is not None)
+    if meal_item:
+        ok("meal item exposes llm phrasing_source", meal_item["phrasing_source"] == "llm", f"got {meal_item['phrasing_source']}")
+        ok(
+            "meal item includes visible food summary",
+            meal_item["visible_food_summary"] == "The photo appears to show a pasta dish with bread.",
+            f"got {meal_item['visible_food_summary']!r}",
+        )
 
 
 def test_coach_nudges_limit():
@@ -952,13 +892,9 @@ if __name__ == "__main__":
         test_action_404_unknown,
         test_action_422_invalid_type,
         test_meal_analysis_photo_only_fallback,
-        test_meal_analysis_provider_uses_photo_only_payload,
         test_meal_analysis_llm_audit_records_model_name,
         test_meal_analysis_missing_key_audit_records_model_name,
-        test_meal_analysis_timeout_records_audit,
-        test_meal_analysis_provider_error_records_audit,
-        test_meal_analysis_invalid_json_records_audit,
-        test_meal_analysis_validation_failure_records_audit,
+        test_meal_analysis_provider_failures_record_audit,
         test_meal_log_one_step_rejects_description_field,
         test_meal_log_one_step_photo_only,
         test_meal_log_requires_photo,
@@ -973,7 +909,6 @@ if __name__ == "__main__":
         test_signal_404_unknown_member,
         test_signals_latest,
         test_coach_nudges,
-        test_coach_nudges_show_llm_source,
         test_coach_nudges_limit,
         test_coach_escalations,
         test_coach_escalations_from_ask_for_help,

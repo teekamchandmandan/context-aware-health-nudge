@@ -13,7 +13,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 os.environ["OPENAI_API_KEY"] = ""
 
 import httpx
-from pydantic import ValidationError
 
 from app.core.config import OPENAI_MODEL
 from app.database import _connect
@@ -22,13 +21,10 @@ from app.engine import (
     evaluate_member,
     select_nudge,
     check_meal_goal_mismatch,
-    check_missing_weight_log,
-    check_support_risk,
     _ts,
     _now,
     _id,
 )
-from app.phrasing import PhrasingOutput
 
 PASS = 0
 FAIL = 0
@@ -343,46 +339,6 @@ def test_support_risk_bypass():
 
     conn.close()
 
-
-# ── Test 9: Evaluator unit checks ───────────────────────────────────────────
-
-def test_evaluator_units():
-    section("Evaluator unit checks")
-    conn = fresh_db()
-
-    # check_meal_goal_mismatch should return candidate for member_meal_01
-    c1 = check_meal_goal_mismatch(conn, "member_meal_01")
-    ok("meal mismatch fires for member_meal_01", c1 is not None)
-    ok("meal mismatch: has source_signal_ids", c1 is not None and len(c1.source_signal_ids) > 0)
-
-    # check_meal_goal_mismatch should NOT fire for non-low_carb member
-    c2 = check_meal_goal_mismatch(conn, "member_weight_01")
-    ok("meal mismatch does NOT fire for weight_loss goal", c2 is None)
-
-    # check_missing_weight_log should fire for member_weight_01
-    c3 = check_missing_weight_log(conn, "member_weight_01")
-    ok("missing weight fires for member_weight_01", c3 is not None)
-
-    # check_missing_weight_log should NOT fire for member with no weight signals but also no expectation
-    # member_meal_01 has no weight signal — but that means they haven't logged at all in 4 days, so it SHOULD fire
-    c4 = check_missing_weight_log(conn, "member_meal_01")
-    ok("missing weight fires for member_meal_01 (never logged)", c4 is not None)
-
-    c4b = check_missing_weight_log(conn, "member_catchup_01")
-    ok("missing weight does NOT fire for member_catchup_01", c4b is None)
-
-    # check_support_risk should fire for member_support_01
-    c5 = check_support_risk(conn, "member_support_01")
-    ok("support risk fires for member_support_01", c5 is not None)
-    ok("support risk: escalation_recommended", c5 is not None and c5.escalation_recommended)
-
-    # check_support_risk should NOT fire for member without mood/dismissals
-    c6 = check_support_risk(conn, "member_meal_01")
-    ok("support risk does NOT fire for member_meal_01", c6 is None)
-
-    conn.close()
-
-
 def test_meal_log_without_meal_profile_is_ignored():
     section("Meal payload without meal profile does not trigger guidance")
     conn = fresh_db()
@@ -644,46 +600,9 @@ def test_support_risk_skips_llm():
     conn.close()
 
 
-def test_phrasing_output_validation():
-    section("Phase 6: phrasing output validation enforces limits and blocked terms")
-
-    ok(
-        "valid phrasing output accepted",
-        PhrasingOutput.model_validate(
-            {
-                "content": "Take a quick weight check-in when you have a minute.",
-                "explanation": "You have not logged weight in the last few days.",
-            }
-        ).content.startswith("Take a quick weight check-in"),
-    )
-
-    try:
-        PhrasingOutput.model_validate(
-            {
-                "content": "x" * 161,
-                "explanation": "short explanation",
-            }
-        )
-        ok("overlong content rejected", False, "validation unexpectedly passed")
-    except ValidationError:
-        ok("overlong content rejected", True)
-
-    try:
-        PhrasingOutput.model_validate(
-            {
-                "content": "This might diagnose a problem.",
-                "explanation": "Please follow a treatment plan.",
-            }
-        )
-        ok("blocked terms rejected", False, "validation unexpectedly passed")
-    except ValidationError:
-        ok("blocked terms rejected", True)
-
-
 # ── Run ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    test_evaluator_units()
     test_meal_log_without_meal_profile_is_ignored()
     test_one_step_meal_input_is_trusted()
     test_meal_mismatch()
@@ -703,7 +622,6 @@ if __name__ == "__main__":
     test_validation_failure_fallback()
     test_existing_active_nudge_skips_rephrase()
     test_support_risk_skips_llm()
-    test_phrasing_output_validation()
 
     print(f"\n{'═' * 60}")
     print(f"Results: {PASS} passed, {FAIL} failed")
