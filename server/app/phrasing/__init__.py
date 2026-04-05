@@ -23,6 +23,29 @@ from .templates import desired_tone_for_confidence, get_template_phrasing
 LOGGER = logging.getLogger("app.phrasing")
 
 
+def _record_failed_phrasing_attempt(
+    conn: sqlite3.Connection,
+    nudge_id: str,
+    *,
+    member_id: str,
+    nudge_type: str,
+    latency_ms: int,
+    fallback_reason: str,
+    model_name: str,
+) -> tuple[sqlite3.Row, None]:
+    _record_llm_call(
+        conn,
+        nudge_id,
+        member_id,
+        nudge_type,
+        success=False,
+        latency_ms=latency_ms,
+        model_name=model_name,
+    )
+    _record_fallback(conn, nudge_id, member_id, nudge_type, fallback_reason, model_name)
+    return _get_nudge(conn, nudge_id), None
+
+
 def maybe_apply_llm_phrasing(
     conn: sqlite3.Connection,
     nudge_id: str,
@@ -62,77 +85,55 @@ def maybe_apply_llm_phrasing(
         parsed = _parse_json_output(raw_content)
         phrasing = PhrasingOutput.model_validate(parsed)
     except httpx.TimeoutException:
-        latency_ms = int((time.perf_counter() - started) * 1000)
-        _record_llm_call(
+        return _record_failed_phrasing_attempt(
             conn,
             nudge_id,
-            member_id,
-            nudge_type,
-            success=False,
-            latency_ms=latency_ms,
+            member_id=member_id,
+            nudge_type=nudge_type,
+            latency_ms=int((time.perf_counter() - started) * 1000),
+            fallback_reason=FallbackReason.timeout.value,
             model_name=model_name,
         )
-        _record_fallback(conn, nudge_id, member_id, nudge_type, FallbackReason.timeout.value, model_name)
-        return _get_nudge(conn, nudge_id), None
     except httpx.HTTPError:
-        latency_ms = int((time.perf_counter() - started) * 1000)
-        _record_llm_call(
+        return _record_failed_phrasing_attempt(
             conn,
             nudge_id,
-            member_id,
-            nudge_type,
-            success=False,
-            latency_ms=latency_ms,
+            member_id=member_id,
+            nudge_type=nudge_type,
+            latency_ms=int((time.perf_counter() - started) * 1000),
+            fallback_reason=FallbackReason.provider_error.value,
             model_name=model_name,
         )
-        _record_fallback(conn, nudge_id, member_id, nudge_type, FallbackReason.provider_error.value, model_name)
-        return _get_nudge(conn, nudge_id), None
     except json.JSONDecodeError:
-        latency_ms = int((time.perf_counter() - started) * 1000)
-        _record_llm_call(
+        return _record_failed_phrasing_attempt(
             conn,
             nudge_id,
-            member_id,
-            nudge_type,
-            success=False,
-            latency_ms=latency_ms,
+            member_id=member_id,
+            nudge_type=nudge_type,
+            latency_ms=int((time.perf_counter() - started) * 1000),
+            fallback_reason=FallbackReason.invalid_json.value,
             model_name=model_name,
         )
-        _record_fallback(conn, nudge_id, member_id, nudge_type, FallbackReason.invalid_json.value, model_name)
-        return _get_nudge(conn, nudge_id), None
     except ValidationError:
-        latency_ms = int((time.perf_counter() - started) * 1000)
-        _record_llm_call(
+        return _record_failed_phrasing_attempt(
             conn,
             nudge_id,
-            member_id,
-            nudge_type,
-            success=False,
-            latency_ms=latency_ms,
+            member_id=member_id,
+            nudge_type=nudge_type,
+            latency_ms=int((time.perf_counter() - started) * 1000),
+            fallback_reason=FallbackReason.validation_failure.value,
             model_name=model_name,
         )
-        _record_fallback(
-            conn,
-            nudge_id,
-            member_id,
-            nudge_type,
-            FallbackReason.validation_failure.value,
-            model_name,
-        )
-        return _get_nudge(conn, nudge_id), None
     except ValueError:
-        latency_ms = int((time.perf_counter() - started) * 1000)
-        _record_llm_call(
+        return _record_failed_phrasing_attempt(
             conn,
             nudge_id,
-            member_id,
-            nudge_type,
-            success=False,
-            latency_ms=latency_ms,
+            member_id=member_id,
+            nudge_type=nudge_type,
+            latency_ms=int((time.perf_counter() - started) * 1000),
+            fallback_reason=FallbackReason.invalid_json.value,
             model_name=model_name,
         )
-        _record_fallback(conn, nudge_id, member_id, nudge_type, FallbackReason.invalid_json.value, model_name)
-        return _get_nudge(conn, nudge_id), None
 
     conn.execute(
         "UPDATE nudges SET content = ?, explanation = ?, phrasing_source = 'llm' WHERE id = ?",

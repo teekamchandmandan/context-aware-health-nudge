@@ -1,8 +1,11 @@
 import base64
 import json
 
-import httpx
-
+from app.core.openai_chat import extract_message_content as _extract_message_content
+from app.core.openai_chat import extract_model_name as _extract_model_name
+from app.core.openai_chat import parse_json_output as _parse_json_output
+from app.core.openai_chat import request_chat_completion as _request_chat_completion
+from app.core.openai_chat import strip_code_fences as _strip_code_fences
 from app.core.config import MEAL_ANALYSIS_TIMEOUT_SECONDS, OPENAI_MODEL
 
 SYSTEM_PROMPT = (
@@ -38,17 +41,11 @@ def request_meal_analysis_json(
         ],
     }
 
-    with httpx.Client(timeout=MEAL_ANALYSIS_TIMEOUT_SECONDS) as client:
-        response = client.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-        )
-        response.raise_for_status()
-        body = response.json()
+    body = _request_chat_completion(
+        api_key=api_key,
+        payload=payload,
+        timeout_seconds=MEAL_ANALYSIS_TIMEOUT_SECONDS,
+    )
 
     return extract_message_content(body), extract_model_name(body)
 
@@ -86,47 +83,21 @@ def build_user_content(
 
 
 def extract_message_content(body: dict) -> str:
-    choices = body.get("choices") or []
-    if not choices:
-        raise ValueError("provider returned no choices")
-
-    message = choices[0].get("message") or {}
-    content = message.get("content")
-
-    if isinstance(content, str):
-        return strip_code_fences(content)
-
-    if isinstance(content, list):
-        text_parts: list[str] = []
-        for part in content:
-            if isinstance(part, dict) and part.get("type") == "text":
-                text = part.get("text")
-                if isinstance(text, str):
-                    text_parts.append(text)
-        if text_parts:
-            return strip_code_fences("".join(text_parts))
-
-    raise ValueError("provider returned no text content")
+    return _extract_message_content(
+        body,
+        text_item_types={"text"},
+        text_value_keys=("text",),
+        error_message="provider returned no text content",
+    )
 
 
 def strip_code_fences(content: str) -> str:
-    stripped = content.strip()
-    if stripped.startswith("```") and stripped.endswith("```"):
-        lines = stripped.splitlines()
-        if len(lines) >= 3:
-            return "\n".join(lines[1:-1]).strip()
-    return stripped
+    return _strip_code_fences(content)
 
 
 def extract_model_name(body: dict) -> str:
-    model_name = body.get("model")
-    if isinstance(model_name, str) and model_name.strip():
-        return model_name.strip()
-    return OPENAI_MODEL
+    return _extract_model_name(body, OPENAI_MODEL)
 
 
 def parse_json_output(raw_content: str) -> dict:
-    parsed = json.loads(raw_content)
-    if not isinstance(parsed, dict):
-        raise ValueError("provider JSON must be an object")
-    return parsed
+    return _parse_json_output(raw_content)

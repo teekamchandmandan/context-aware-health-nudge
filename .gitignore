@@ -32,3 +32,5 @@ client/.env.local
 .tmp/
 .vite/
 
+# Github
+.github/
