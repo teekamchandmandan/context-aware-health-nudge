@@ -1,8 +1,10 @@
 # Product and Technical Note
 
-## User Problem
+_(For setup instructions and the architecture overview, see the [README](../README.md).)_
 
-This prototype implements an event-driven feature where recent member signals drive a contextual next step—before the member has to interpret their own history or a coach has to manually inspect raw events.
+## What This Solves
+
+This prototype implements a signal-driven feature where recent member inputs—meals, weight logs, mood entries—drive a contextual next step before the member has to interpret their own history or a coach has to manually inspect raw data.
 
 It focuses on four concrete cases:
 
@@ -22,21 +24,25 @@ This note assumes a narrow, local prototype rather than a production health plat
 - **Local persistence.** SQLite is used as the data store. A production deployment would use a managed relational database.
 - **Deterministic decisioning.** The system decides whether to show a nudge through explicit rules, not through an LLM.
 - **Bounded LLM usage.** OpenAI is used only to classify meal photos and rewrite approved nudge copy. If the model is unavailable or returns invalid output, the system falls back to deterministic defaults.
-- **Single nudge at a time.** The product shows one current recommendation per member instead of a queue. That keeps the experience focused and makes the prototype easier to evaluate.
+- **Single nudge at a time.** The product shows one _active_ nudge per member instead of a queue (though superseded nudges accumulate in history when new signals arrive). That keeps the experience focused and makes the prototype easier to evaluate.
 - **Limited coach surface.** The coach view exposes recent nudges and open escalations for review and supports resolving escalations. Assignment and note-taking are not supported.
 
 ## System Model
 
-The runtime model uses straightforward evaluation logic. Member inputs are stored as signals. The engine checks those signals against four deterministic rules. If more than one rule matches, the system picks one current state based on priority. Non-urgent nudges respect a 24-hour cooldown per nudge type and a daily cap of 2 auto-delivered nudges. The support-risk path bypasses those limits because a possible need for human follow-up matters more than avoiding one extra prompt.
+The runtime model uses straightforward evaluation logic. Member inputs (meals, weight, mood, sleep) are stored as signals—timestamped records in the `signals` table. The engine checks those signals against four deterministic rules. If more than one rule matches, the system picks one current state based on priority. Non-urgent nudges respect a 24-hour cooldown per nudge type and a daily cap of 2 auto-delivered nudges. The support-risk path bypasses those limits because a possible need for human follow-up matters more than avoiding one extra prompt.
 
-- **Meal guidance.** Triggered when a member whose active plan specifies a low-carb diet logs a recent meal that is classified as higher carb. The system responds with an active nudge for the next meal.
+- **Meal guidance.** Triggered when a member with a low-carb dietary goal (stored as `goal_type` on their profile) logs a recent meal classified as higher carb. The system responds with an active nudge for the next meal.
 - **Weight check-in.** Triggered when a member has not logged weight in the last 4 days. The system responds with an active reminder.
 - **Support risk (dismiss-based).** Triggered when a member reports low mood and has dismissed at least 2 nudges in the last 7 days. The system responds with an escalated state for coach review instead of another automated nudge.
 - **Support risk (repeated low mood).** Triggered when a member logs low mood 3 or more times within the last 3 days, independent of dismiss history. The system escalates to a coach based on the mood pattern alone.
 
-Confidence is computed from observable factors rather than assigned by hand. Meal guidance gets stronger when the meal is recent and clearly classified. Weight check-in starts lower because absence of data is a weaker signal, then rises as the member becomes more overdue. Support risk stays below the automation threshold by design, so it always routes to coach review rather than acting like a high-confidence automated recommendation.
+Both support-risk paths produce the same `support_risk` nudge type and route to the same escalation flow.
 
-The system also checks freshness on every member read. If a new signal arrives after a nudge is created, the older nudge is retired and the member is re-evaluated. That keeps the surface current instead of showing stale guidance. Audit events record nudge generation, user actions, escalation creation, and LLM calls or fallbacks so the behavior stays reviewable.
+Confidence is a 0–1 score computed from observable factors—signal recency, severity, recent member activity—rather than assigned by hand. Nudges with confidence at or above 0.50 are delivered directly to the member; nudges below 0.50, or any nudge flagged as safety-sensitive, are escalated to a coach. Meal guidance gets stronger when the meal is recent and clearly classified. Weight check-in starts lower because absence of data is a weaker signal, then rises as the member becomes more overdue. Support risk is hard-capped below 0.48 by design, so it always routes to coach review rather than acting like a high-confidence automated recommendation.
+
+The system also checks freshness on every member read. If a new signal arrives after a nudge is created, the older nudge is retired and the member is re-evaluated. That keeps the surface current instead of showing stale guidance.
+
+Audit events record nudge generation, user actions, escalation creation, and LLM calls or fallbacks in the `audit_events` table so the behavior stays reviewable. These events are also accessible through the coach API endpoints and can be queried directly in SQLite.
 
 ## Success Metrics
 
@@ -50,11 +56,11 @@ For a production deployment, the following metrics would provide visibility into
 **Quality**
 
 - **Dismissal rate by nudge type.** High dismissal of a specific type suggests the rule is too aggressive or the phrasing is unhelpful.
-- **Escalation-to-resolution time.** How quickly a coach reviews and responds to an open escalation.
+- **Escalation-to-resolution time** _(not yet measurable)_**.** How quickly a coach reviews and responds to an open escalation.
 
 **Safety**
 
-- **False-positive escalation rate.** Percentage of escalations that the coach determines did not require human follow-up.
+- **False-positive escalation rate** _(not yet measurable)_**.** Percentage of escalations that the coach determines did not require human follow-up.
 - **LLM fallback rate by surface.** How often phrasing or meal analysis falls back to deterministic defaults, and whether fallback correlates with lower act-on rates.
 
 In the current repo, a few of these metrics are partially visible now: act-on rate, dismissal rate, fallback rate, and basic escalation volume. Signal logging frequency is visible in the data but not yet summarized as product analytics. Escalation-to-resolution time and false-positive escalation rate are not yet measurable in a useful way because the coach workflow does not support resolution or triage feedback.
@@ -98,6 +104,7 @@ For a broader deployment, a phased rollout approach introduces changes gradually
 ### Stage 1 - Internal review
 
 - Run the system with synthetic or replayed data and review every generated nudge and escalation with a coach or program lead.
+- Validate engine behavior, API contracts, and audit recording against the existing automated test suite before manual review.
 - Use audit events to inspect matched reason, confidence factors, phrasing source, and escalation path rather than judging only the UI output.
 - Use this stage to tune thresholds, validate phrasing safety, and confirm that the escalation rule is not too noisy.
 
@@ -117,4 +124,4 @@ For a broader deployment, a phased rollout approach introduces changes gradually
 
 ## Summary
 
-This prototype demonstrates the core review loop, validates safety guardrails, and provides a foundation for tuning signals in a production environment.
+This prototype covers four nudge rules: meal guidance, weight check-in, dismiss-based support risk, and repeated-low-mood support risk. A confidence model routes uncertain or safety-sensitive cases to a coach. Fatigue controls enforce cooldowns and a daily cap to prevent over-nudging. An audit trail records every decision so the behavior stays reviewable. The rollout plan moves from internal review through limited pilot to broader deployment, with each step conditioned on observed metrics. The system works fully without an LLM and is designed to be extended with new evaluator types once the initial rules are validated.
