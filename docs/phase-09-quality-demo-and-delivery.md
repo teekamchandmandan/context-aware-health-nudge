@@ -52,7 +52,7 @@ For the full intended submission, assume all prior phases are complete. If a bra
 
 - Prefer `pytest` for backend tests.
 - Focus on explicit rule-path coverage rather than a vanity repo-wide coverage target.
-- Store the final product and technical note in `docs/product-technical-note.md`.
+- Store the final product and technical note in `product-technical-note.md` at the repository root.
 - Store the manual verification checklist in `docs/manual-verification.md` or as a clearly labeled README appendix.
 
 ## Product Note Checklist

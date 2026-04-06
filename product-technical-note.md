@@ -1,6 +1,6 @@
 # Product and Technical Note
 
-_(For setup instructions and the architecture overview, see the [README](../README.md).)_
+_(For setup instructions and the architecture overview, see the [README](README.md).)_
 
 ## What This Solves
 

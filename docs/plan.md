@@ -238,7 +238,7 @@ Verification status:
 Supporting delivery docs present in the repo:
 
 - `README.md`
-- `docs/product-technical-note.md`
+- `product-technical-note.md`
 - `docs/manual-verification.md`
 
 ## 12. Known Deltas and Follow-On Work

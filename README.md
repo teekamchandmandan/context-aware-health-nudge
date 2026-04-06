@@ -180,7 +180,7 @@ The model receives only the image — no member context, no written description 
 
 The current upload path accepts PNG, JPEG, GIF, and WEBP meal photos up to 10 MB. Unsupported formats are rejected before analysis so the member gets a clear retry path instead of a vague fallback.
 
-For the full product rationale, assumptions, success metrics, and rollout plan, see [docs/product-technical-note.md](docs/product-technical-note.md).
+For the full product rationale, assumptions, success metrics, and rollout plan, see [product-technical-note.md](product-technical-note.md).
 
 ## Resetting the Demo
 
