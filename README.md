@@ -2,11 +2,13 @@
 
 A proactive health coaching prototype that delivers personalized nudges, escalates higher-risk moments to a coach, and keeps every decision reviewable.
 
+A **nudge** is a short, contextual message surfaced to a member — for example, a gentle reminder after a higher-carb meal or a prompt to log weight. A **signal** is a self-reported data entry (meal, weight, mood, or sleep) that the member logs through the app. When signals suggest a situation the system shouldn't handle automatically — such as repeated low mood — the engine creates an **escalation**, routing the case to a human coach instead of sending another nudge.
+
 ## Quick Start
 
-The project runs locally with or without an `OPENAI_API_KEY`. Without a key, the app uses template phrasing and conservative meal-analysis fallbacks.
+The project runs locally with or without an `OPENAI_API_KEY`. Without a key, the app falls back to pre-written template text for nudges and a conservative default classification for meal photos — no core features are lost, just the natural-language polish.
 
-Requires Node.js (≥20) and Python (3.10+).
+Requires `make`, Node.js (≥20), and Python (3.10+).
 
 ```bash
 # Installs dependencies (Python venv + npm) and seeds the SQLite database
@@ -21,16 +23,28 @@ make dev
 
 After `make dev`, open `http://localhost:5173/member` for the member experience and `http://localhost:5173/coach` for the coach review flow. If Vite chooses a different port because `5173` is already in use, use the frontend URL printed in the terminal.
 
+The backend also serves interactive API docs at `http://127.0.0.1:8000/docs` (Swagger UI) for exploring endpoints directly.
+
 ### Seeded Demo Scenarios
 
 The database is pre-loaded with four members representing distinct states:
 
-| Member           | Signal                                    | Nudge trigger                                                                                                                                                                                      |
-| ---------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Alice Chen**   | Logged a pasta-and-bread meal             | Higher-carb meal against a low-carb goal → meal guidance nudge (computed confidence, typically 0.78–0.90 depending on recency and classification clarity)                                          |
-| **Bob Martinez** | No weight log in 7 days                   | Missing weight log → weight check-in nudge (computed confidence, typically 0.50–0.76 depending on overdue severity and recent activity)                                                            |
-| **Carol Davis**  | Logged "low" mood 3 times                 | Repeated low mood → support escalation nudge (escalation recommended, computed confidence hard-capped below 0.48 for safety). Historical acted and dismissed nudges are visible in the coach view. |
-| **Diego Rivera** | Recent weight log, no out-of-range signal | No active nudge — demonstrates the all-good / no-nudge state                                                                                                                                       |
+| Member           | Signal                                    | What you'll see                                                           |
+| ---------------- | ----------------------------------------- | ------------------------------------------------------------------------- |
+| **Alice Chen**   | Logged a pasta-and-bread meal             | Meal guidance nudge — higher-carb meal against her low-carb goal          |
+| **Bob Martinez** | No weight log in 7 days (trigger is 4+)   | Weight check-in nudge — reminds him to log weight                         |
+| **Carol Davis**  | Logged "low" mood 3 times                 | Support escalation — routed to a coach instead of another automated nudge |
+| **Diego Rivera** | Recent weight log, no out-of-range signal | No active nudge — the all-good / no-nudge state                           |
+
+Each nudge carries a **confidence** score (0–1) reflecting how certain the rule engine is that a nudge is appropriate. Scores at or above 0.50 are delivered directly to the member; scores below 0.50 — or cases flagged as safety-sensitive like Carol's — are escalated to a coach for review. Confidence is computed from factors like signal recency, severity, and recent member activity, not from an LLM.
+
+<details>
+<summary>Confidence ranges per scenario</summary>
+
+- **Alice:** typically 0.78–0.90, depending on meal recency and classification clarity.
+- **Bob:** typically 0.50–0.76, depending on how overdue the weight log is and recent activity on other signals.
+- **Carol:** hard-capped below 0.48 — the engine ensures repeated-low-mood nudges always route to a coach.
+</details>
 
 Switch between members using the member switcher in the top-right corner of both views.
 
@@ -40,29 +54,59 @@ _(See `.env.example` in `server/` and `client/` for available environment overri
 
 ## Screenshots
 
-**Member view — meal guidance nudge (Alice Chen)**
+<table>
+<tr>
+<td width="50%">
 
-A deterministic rule evaluates Alice's higher-carb meal against her low-carb goal and surfaces an actionable nudge with three response options.
+**Alice Chen — meal guidance nudge**
+
+A higher-carb meal against a low-carb goal surfaces an actionable nudge with three response options.
 
 ![Member view showing a meal guidance nudge for Alice Chen](docs/screenshots/member-alice-meal-guidance.png)
 
-**Member view — support escalation state (Carol Davis)**
+</td>
+<td width="50%">
 
-When the rule engine crosses the escalation threshold, the member sees a supportive holding state instead of further automated nudges while a coach reviews the case.
+**Bob Martinez — weight check-in nudge**
+
+A missing weight log triggers a gentle reminder to check in.
+
+![Member view showing a weight check-in nudge for Bob Martinez](docs/screenshots/member-bob-weight-checkin.png)
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Carol Davis — support escalation state**
+
+When the engine crosses the escalation threshold, the member sees a supportive holding state while a coach reviews the case.
 
 ![Member view showing the support escalation state for Carol Davis](docs/screenshots/member-carol-support-status.png)
 
-**Member view — no active nudge (Diego Rivera)**
+</td>
+<td>
 
-When all signals are within normal range, the member sees a reassuring "all set" state with quick check-in cards for logging weight, sleep, mood, and meals.
+**Diego Rivera — no active nudge**
+
+When all signals are within normal range, the member sees an "all set" state with quick check-in cards.
 
 ![Member view showing the no-nudge state for Diego Rivera](docs/screenshots/member-diego-no-nudge.png)
 
+</td>
+</tr>
+<tr>
+<td colspan="2">
+
 **Coach dashboard**
 
-The coach view lists open escalations and a full nudge history with status badges (Active, Escalated, Acted, Dismissed) so reviewers can see what the system surfaced and what members did with it.
+The coach view lists open escalations and a full nudge history with status badges so reviewers can see what the system surfaced and how members responded. The statuses are: **Active** (currently displayed to the member), **Escalated** (routed to a coach instead of being delivered), **Acted** (the member tapped an action option), and **Dismissed** (the member chose to skip it).
 
 ![Coach dashboard showing escalations and recent nudge history](docs/screenshots/coach-dashboard.png)
+
+</td>
+</tr>
+</table>
 
 ## Architecture
 
@@ -115,7 +159,7 @@ flowchart TB
     linkStyle default stroke:#334155,stroke-width:2px,fill:none;
 ```
 
-The core design principle is **rules first, LLM at the edges**. Decisioning — which nudge to surface, at what confidence, whether to escalate — is handled entirely by deterministic rule evaluators and a priority/fatigue policy. This makes every decision auditable and reproducible without a model, and keeps the escalation boundary (a safety concern) outside probabilistic systems. LLM calls are reserved for two bounded, fallback-safe tasks: rewriting pre-approved nudge text into natural language, and classifying a meal photo. Both have template fallbacks and output validation. SQLite was chosen to eliminate infrastructure dependency for a prototype; it can be swapped for PostgreSQL without touching the application layer.
+The core design principle is **rules first, LLM at the edges**. Decisioning — which nudge to surface, at what confidence, whether to escalate — is handled entirely by deterministic rule evaluators and a priority/fatigue policy (a same-type cooldown of 24 hours plus a daily cap of 2 nudges, with safety escalations exempt from both). This makes every decision auditable and reproducible without a model, and keeps the escalation boundary (a safety concern) outside probabilistic systems. LLM calls are reserved for two bounded, fallback-safe tasks: rewriting pre-approved nudge text into natural language, and classifying a meal photo. Both have template fallbacks and output validation. SQLite was chosen to eliminate infrastructure dependency for a prototype; it can be swapped for PostgreSQL without touching the application layer.
 
 Architecture at a glance:
 
