@@ -56,7 +56,7 @@ def test_member_nudge_llm_timeout_fallback(api_client):
     assert response.status_code == 200
     data = response.json()
     assert data["nudge"]["phrasing_source"] == "template"
-    assert data["nudge"]["content"] == "Try a lighter, lower-carb dinner to balance today's earlier meal."
+    assert data["nudge"]["content"] == "Consider a lighter, lower-carb option for your next meal to stay on track."
 
 
 def test_member_nudge_llm_idempotent_reads(api_client):
@@ -104,6 +104,7 @@ def test_member_nudge_no_nudge(api_client):
 
 
 def test_member_nudge_escalated(api_client):
+    api_client.post("/api/members/member_support_01/signals", json={"signal_type": "mood_logged", "payload": {"mood": "low"}})
     response = api_client.get("/api/members/member_support_01/nudge")
     assert response.status_code == 200
 

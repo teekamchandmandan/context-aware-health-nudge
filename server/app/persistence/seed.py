@@ -48,7 +48,7 @@ def _seed(conn: sqlite3.Connection) -> None:
         ("member_meal_01", "Alice Chen", "low_carb", None, _ts(now - timedelta(days=30))),
         ("member_weight_01", "Bob Martinez", "weight_loss", None, _ts(now - timedelta(days=30))),
         ("member_support_01", "Carol Davis", "balanced", None, _ts(now - timedelta(days=30))),
-        ("member_catchup_01", "Diego Rivera", "balanced", None, _ts(now - timedelta(days=30))),
+        ("member_catchup_01", "Diego Rivera", "low_carb", None, _ts(now - timedelta(days=30))),
     ]
     conn.executemany(
         "INSERT INTO members (id, name, goal_type, profile_json, created_at) VALUES (?, ?, ?, ?, ?)",
@@ -93,8 +93,15 @@ def _seed(conn: sqlite3.Connection) -> None:
             _id(),
             "member_support_01",
             "mood_logged",
-            json.dumps({"mood": "low"}),
+            json.dumps({"mood": "neutral"}),
             _ts(now - timedelta(hours=6)),
+        ),
+        (
+            _id(),
+            "member_support_01",
+            "weight_logged",
+            json.dumps({"weight_lb": 145.0}),
+            _ts(now - timedelta(days=1)),
         ),
         (
             _id(),

@@ -119,7 +119,7 @@ def test_validation_failure_fallback(db_conn):
         result = evaluate_member(db_conn, "member_meal_01")
 
     assert result["nudge"]["phrasing_source"] == "template"
-    assert result["nudge"]["content"] == "Try a lighter, lower-carb dinner to balance today's earlier meal."
+    assert result["nudge"]["content"] == "Consider a lighter, lower-carb option for your next meal to stay on track."
 
     fallback = db_conn.execute(
         "SELECT payload_json FROM audit_events WHERE event_type = 'llm_fallback' ORDER BY created_at DESC LIMIT 1"
@@ -159,6 +159,12 @@ def test_existing_active_nudge_skips_rephrase(db_conn):
 
 
 def test_support_risk_skips_llm(db_conn):
+    from app.engine import _id, _now, _ts
+    db_conn.execute(
+        "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+        (_id(), "member_support_01", "mood_logged", json.dumps({"mood": "low"}), _ts(_now())),
+    )
+    db_conn.commit()
     with patch("app.phrasing.get_openai_api_key", return_value="test-key"), patch(
         "app.phrasing._request_llm_json",
         side_effect=AssertionError("LLM should not run for escalations"),

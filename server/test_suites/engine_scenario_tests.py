@@ -79,6 +79,11 @@ def test_new_signal_supersedes_active_nudge(db_conn):
 
 
 def test_support_risk(db_conn):
+    db_conn.execute(
+        "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+        (_id(), "member_support_01", "mood_logged", json.dumps({"mood": "low"}), _ts(_now())),
+    )
+    db_conn.commit()
     result = evaluate_member(db_conn, "member_support_01")
     assert result["state"] == "escalated"
     assert "nudge_id" in result
@@ -117,6 +122,16 @@ def test_support_risk(db_conn):
 
 def test_priority_order(db_conn):
     db_conn.execute("UPDATE members SET goal_type = 'low_carb' WHERE id = 'member_support_01'")
+    db_conn.execute(
+        "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+        (
+            _id(),
+            "member_support_01",
+            "mood_logged",
+            json.dumps({"mood": "low"}),
+            _ts(_now()),
+        ),
+    )
     db_conn.execute(
         "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
         (
@@ -213,15 +228,16 @@ def test_repeated_low_mood_ignores_non_low(db_conn):
 def test_repeated_low_mood_bypasses_fatigue(db_conn):
     """Repeated low mood escalation should ignore daily cap."""
     member = "member_catchup_01"
-    # Create 2 nudges today to hit the daily cap
-    for i in range(2):
+    # Create 2 nudges today to hit the daily cap using terminal statuses so the
+    # unique-active-per-member constraint is not violated.
+    for i, status in enumerate(("acted", "dismissed")):
         db_conn.execute(
             """INSERT INTO nudges (id, member_id, nudge_type, content, explanation, matched_reason,
                confidence, escalation_recommended, status, generated_by, phrasing_source,
                created_at, delivered_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (_id(), member, "weight_check_in", "content", "explanation", "missing_weight_log",
-             0.55, 0, "active", "rule_engine", "template", _ts(_now() - timedelta(hours=i + 1)),
+             0.55, 0, status, "rule_engine", "template", _ts(_now() - timedelta(hours=i + 1)),
              _ts(_now() - timedelta(hours=i + 1))),
         )
     # Add 3 low moods
@@ -285,6 +301,10 @@ def test_support_risk_bypass(db_conn):
     member = "member_support_01"
     now = _now()
 
+    db_conn.execute(
+        "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
+        (_id(), member, "mood_logged", json.dumps({"mood": "low"}), _ts(now)),
+    )
     for _ in range(2):
         db_conn.execute(
             """INSERT INTO nudges

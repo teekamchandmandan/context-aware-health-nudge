@@ -245,9 +245,9 @@ export default function MealForm({
           <p className='mt-1 text-xs text-[var(--color-muted)]'>
             or choose from your gallery
           </p>
-          <p className='mt-2 text-xs text-[var(--color-muted)]'>
+          {/* <p className='mt-2 text-xs text-[var(--color-muted)]'>
             {SUPPORTED_MEAL_PHOTO_MESSAGE}
-          </p>
+          </p> */}
           <label
             htmlFor='meal-photo'
             className='mt-4 inline-flex cursor-pointer items-center justify-center rounded-full border border-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-primary)] transition hover:bg-[rgba(168,239,239,0.12)]'

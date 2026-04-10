@@ -35,3 +35,5 @@ client/.env.local
 
 # Github
 .github/
+
+ignore/

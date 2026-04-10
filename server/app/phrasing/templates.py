@@ -1,6 +1,6 @@
 TEMPLATE_PHRASING: dict[str, dict[str, str]] = {
     "meal_guidance": {
-        "content": "Try a lighter, lower-carb dinner to balance today's earlier meal.",
+        "content": "Consider a lighter, lower-carb option for your next meal to stay on track.",
         "explanation": "You logged a higher-carb meal today and your goal is low carb.",
     },
     "weight_check_in": {

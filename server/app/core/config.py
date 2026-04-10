@@ -10,7 +10,7 @@ load_dotenv(SERVER_ROOT / ".env")
 DATABASE_PATH: str = os.getenv("DATABASE_PATH", str(SERVER_ROOT / "nudge.db"))
 DEBUG: bool = os.getenv("DEBUG", "").lower() == "true"
 OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-5-mini")
-PHRASING_TIMEOUT_SECONDS: float = float(os.getenv("PHRASING_TIMEOUT_SECONDS", "3"))
+PHRASING_TIMEOUT_SECONDS: float = float(os.getenv("PHRASING_TIMEOUT_SECONDS", "20"))
 MEAL_ANALYSIS_TIMEOUT_SECONDS: float = float(os.getenv("MEAL_ANALYSIS_TIMEOUT_SECONDS", "12"))
 
 

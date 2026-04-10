@@ -59,6 +59,9 @@ CREATE TABLE IF NOT EXISTS audit_events (
     created_at   TEXT NOT NULL
 );
 
+-- Prevent duplicate active nudges for the same member (guards against concurrent evaluate_member calls)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_one_active_nudge_per_member ON nudges(member_id) WHERE status = 'active';
+
 -- Performance indexes for frequent query patterns
 CREATE INDEX IF NOT EXISTS idx_signals_member_type ON signals(member_id, signal_type, created_at);
 CREATE INDEX IF NOT EXISTS idx_nudges_member_status ON nudges(member_id, status, created_at);
