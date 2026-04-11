@@ -77,7 +77,7 @@ In the current repo, a few of these metrics are partially visible now: act-on ra
 
 **Risk:** The LLM generates text that includes medical advice, diagnoses, or prescriptive language that a wellness nudge should not contain.
 
-**Mitigation:** The system validates LLM output against a blocked-term list (diagnose, medication, prescription, treatment plan, etc.), caps each field at 160 characters, and falls back to a deterministic template on timeout, provider error, missing keys, invalid JSON, or validation failure. The prompt is tightly scoped to structured facts and explicitly prohibits medical framing. Audit events record whether each nudge used LLM or template phrasing.
+**Mitigation:** The system validates LLM output against a blocked-term list (diagnose, diagnosis, medication, prescription, dose, treatment plan, medical advice, doctor, clinician, therapy, therapist, cure, remedy), caps each field at 160 characters, and falls back to a deterministic template on timeout, provider error, missing keys, invalid JSON, or validation failure. The prompt is tightly scoped to structured facts and explicitly prohibits medical framing. Audit events record whether each nudge used LLM or template phrasing.
 
 ### False-positive escalations
 
