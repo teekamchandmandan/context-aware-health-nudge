@@ -59,7 +59,7 @@ def evaluate_member(conn: sqlite3.Connection, member_id: str) -> dict:
         conn.commit()
         if surviving:
             return {"state": "active", "nudge": dict(surviving)}
-        raise exc
+        raise
 
 
 __all__ = [
