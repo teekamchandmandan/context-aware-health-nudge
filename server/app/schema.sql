@@ -60,6 +60,25 @@ CREATE TABLE IF NOT EXISTS audit_events (
 );
 
 -- Prevent duplicate active nudges for the same member (guards against concurrent evaluate_member calls)
+-- Repair legacy duplicates before enforcing the one-active-nudge invariant.
+-- Keep the newest active nudge per member and mark older ones as superseded.
+WITH ranked_active_nudges AS (
+    SELECT
+        id,
+        ROW_NUMBER() OVER (
+            PARTITION BY member_id
+            ORDER BY created_at DESC, id DESC
+        ) AS row_num
+    FROM nudges
+    WHERE status = 'active'
+)
+UPDATE nudges
+SET status = 'superseded'
+WHERE id IN (
+    SELECT id
+    FROM ranked_active_nudges
+    WHERE row_num > 1
+);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_one_active_nudge_per_member ON nudges(member_id) WHERE status = 'active';
 
 -- Performance indexes for frequent query patterns

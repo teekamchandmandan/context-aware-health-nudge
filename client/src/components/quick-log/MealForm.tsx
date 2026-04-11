@@ -61,7 +61,6 @@ const SUPPORTED_MEAL_PHOTO_EXTENSIONS = [
 ];
 const SUPPORTED_MEAL_PHOTO_ACCEPT =
   'image/png,image/jpeg,image/jpg,image/gif,image/webp';
-const SUPPORTED_MEAL_PHOTO_MESSAGE = 'PNG, JPEG, GIF, or WEBP up to 10 MB.';
 const INVALID_PHOTO_MESSAGE = 'Upload a PNG, JPEG, GIF, or WEBP image.';
 const INVALID_DROP_MESSAGE = 'Please drop a PNG, JPEG, GIF, or WEBP image.';
 

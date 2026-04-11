@@ -254,17 +254,35 @@ export default function CoachNudgesList({ items }: Props) {
                                     className='flex items-start gap-2 text-sm text-[var(--color-text)]'
                                   >
                                     {f.value > 0 ? (
-                                      <span className='mt-0.5 text-[var(--color-accent)]'>
-                                        ✓
-                                      </span>
+                                      <>
+                                        <span
+                                          aria-hidden='true'
+                                          className='mt-0.5 text-[var(--color-accent)]'
+                                        >
+                                          ✓
+                                        </span>
+                                        <span className='sr-only'>supports</span>
+                                      </>
                                     ) : f.value < 0 ? (
-                                      <span className='mt-0.5 text-[var(--color-warning-text)]'>
-                                        ⚠
-                                      </span>
+                                      <>
+                                        <span
+                                          aria-hidden='true'
+                                          className='mt-0.5 text-[var(--color-warning-text)]'
+                                        >
+                                          ⚠
+                                        </span>
+                                        <span className='sr-only'>concerns</span>
+                                      </>
                                     ) : (
-                                      <span className='mt-0.5 text-[var(--color-muted)]'>
-                                        —
-                                      </span>
+                                      <>
+                                        <span
+                                          aria-hidden='true'
+                                          className='mt-0.5 text-[var(--color-muted)]'
+                                        >
+                                          —
+                                        </span>
+                                        <span className='sr-only'>neutral</span>
+                                      </>
                                     )}
                                     <span>{f.label}</span>
                                   </li>

@@ -49,16 +49,17 @@ def evaluate_member(conn: sqlite3.Connection, member_id: str) -> dict:
         result = create_nudge_from_candidate(conn, member_id, candidate)
         conn.commit()
         return result
-    except sqlite3.IntegrityError:
-        # A concurrent request already created an active nudge for this member
-        # (unique partial index on status='active' fired). Roll back and return
-        # whichever nudge the other request committed.
+    except sqlite3.IntegrityError as exc:
+        # A concurrent request may already have created an active nudge for
+        # this member (unique partial index on status='active' fired). Roll
+        # back and only recover if an active nudge now exists; otherwise the
+        # integrity error was unrelated and should not be hidden.
         conn.rollback()
         surviving = get_active_nudge(conn, member_id)
         conn.commit()
         if surviving:
             return {"state": "active", "nudge": dict(surviving)}
-        return {"state": "no_nudge"}
+        raise exc
 
 
 __all__ = [
