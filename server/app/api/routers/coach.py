@@ -18,7 +18,8 @@ from app.services.signals import utc_timestamp
 router = APIRouter(prefix="/api/coach", tags=["coach"])
 
 
-COACH_NUDGES_QUERY = """SELECT n.id, n.member_id, m.name AS member_name, n.nudge_type,
+COACH_NUDGES_QUERY = """SELECT n.id, n.member_id, m.name AS member_name, m.goal_type AS member_goal,
+                              n.nudge_type,
                               n.content, n.explanation, n.matched_reason, n.confidence,
                               n.confidence_factors_json,
                               n.escalation_recommended, n.status, n.phrasing_source,
@@ -92,16 +93,8 @@ def _derive_confidence_summary(
 
     if nudge_type in _SAFETY_PATH_TYPES:
         return (
-            "Safety path: score is intentionally conservative — "
-            "coach review is always recommended."
+            "Coach review is always recommended for safety-sensitive nudges."
         )
-
-    if confidence >= 0.75:
-        band = "High"
-    elif confidence >= 0.50:
-        band = "Moderate"
-    else:
-        band = "Low"
 
     # Build a short rationale from the top non-base factor label.
     reason = ""
@@ -109,9 +102,9 @@ def _derive_confidence_summary(
         non_base = [f for f in factors if f.get("name") != "base"]
         if non_base:
             top = max(non_base, key=lambda f: abs(f.get("value", 0)))
-            reason = f" {top['label'].rstrip('.')}."
+            reason = top['label'].rstrip('.')
 
-    return f"{band} confidence.{reason}"
+    return f"{reason}." if reason else None
 
 
 def _build_coach_nudge_item(row: sqlite3.Row) -> CoachNudgeItem:
@@ -121,6 +114,7 @@ def _build_coach_nudge_item(row: sqlite3.Row) -> CoachNudgeItem:
         nudge_id=row["id"],
         member_id=row["member_id"],
         member_name=row["member_name"],
+        member_goal=row["member_goal"],
         nudge_type=row["nudge_type"],
         visible_food_summary=_get_coach_nudge_visible_food_summary(row),
         content=row["content"],

@@ -58,6 +58,7 @@ def test_coach_nudges_limit(api_client):
 
 
 def test_coach_escalations(api_client):
+    api_client.post("/api/members/member_support_01/signals", json={"signal_type": "mood_logged", "payload": {"mood": "low"}})
     api_client.get("/api/members/member_support_01/nudge")
 
     response = api_client.get("/api/coach/escalations")
@@ -88,6 +89,7 @@ def test_coach_escalations_from_ask_for_help(api_client):
 
 def _create_open_escalation(api_client) -> str:
     """Helper: trigger the support-risk escalation and return its id."""
+    api_client.post("/api/members/member_support_01/signals", json={"signal_type": "mood_logged", "payload": {"mood": "low"}})
     api_client.get("/api/members/member_support_01/nudge")
     esc_resp = api_client.get("/api/coach/escalations")
     items = esc_resp.json()["items"]

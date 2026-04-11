@@ -86,6 +86,7 @@ export interface CoachNudgeItem {
   nudge_id: string;
   member_id: string;
   member_name: string;
+  member_goal: string | null;
   nudge_type: string;
   visible_food_summary: string | null;
   content: string | null;

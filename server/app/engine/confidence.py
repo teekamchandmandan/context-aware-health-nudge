@@ -61,10 +61,10 @@ def score_meal_guidance(
 
     if meal_profile != "unclear":
         clarity_value = 0.08
-        clarity_label = f"Classification clear ({meal_profile})"
+        clarity_label = f"Meal clearly identified as {meal_profile.replace('_', ' ')}"
     else:
         clarity_value = -0.08
-        clarity_label = "Classification unclear — lower certainty"
+        clarity_label = "Meal type less certain"
     factors.append({"name": "clarity", "value": clarity_value, "label": clarity_label})
 
     score = _clamp(base + recency_value + clarity_value)
@@ -104,10 +104,10 @@ def score_weight_check_in(
 
     if has_recent_activity:
         activity_value = 0.08
-        activity_label = "Member active on other signals"
+        activity_label = "Member active on other check-ins"
     else:
         activity_value = 0.0
-        activity_label = "No other recent activity"
+        activity_label = "No other recent check-ins"
     factors.append({"name": "activity", "value": activity_value, "label": activity_label})
 
     score = _clamp(base + overdue_value + activity_value)

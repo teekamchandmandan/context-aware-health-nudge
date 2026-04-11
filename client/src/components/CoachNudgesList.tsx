@@ -19,26 +19,25 @@ function confidenceBand(
       className: 'bg-[var(--color-surface-soft)] text-[var(--color-muted)]',
     };
 
-  const pct = `${(c * 100).toFixed(0)}%`;
   const isSafetyPath = nudgeType === 'support_risk';
 
   if (isSafetyPath)
     return {
-      label: `Review · ${pct}`,
+      label: 'Review',
       className: 'bg-[rgba(255,209,102,0.25)] text-[var(--color-warning-text)]',
     };
   if (c >= 0.75)
     return {
-      label: `High · ${pct}`,
+      label: 'High',
       className: 'bg-[rgba(143,246,208,0.22)] text-[var(--color-accent)]',
     };
   if (c >= 0.5)
     return {
-      label: `Moderate · ${pct}`,
+      label: 'Moderate',
       className: 'bg-[rgba(255,209,102,0.25)] text-[var(--color-warning-text)]',
     };
   return {
-    label: `Low · ${pct}`,
+    label: 'Low',
     className: 'bg-[rgba(186,26,26,0.08)] text-[var(--color-error)]',
   };
 }
@@ -71,9 +70,11 @@ const NUDGE_TYPE_LABELS: Record<string, string> = {
   support_risk: 'Support risk',
 };
 
-const PHRASING_LABELS: Record<string, string> = {
-  template: 'Template',
-  llm: 'LLM-refined',
+const MATCHED_REASON_LABELS: Record<string, string> = {
+  meal_goal_mismatch: 'Meal–goal mismatch',
+  missing_weight_log: 'Weight log overdue',
+  support_risk: 'Support risk detected',
+  repeated_low_mood: 'Repeated low mood',
 };
 
 function nudgeTypeLabel(type: string): string {
@@ -180,13 +181,7 @@ export default function CoachNudgesList({ items }: Props) {
 
             {isExpanded && (
               <div className='border-t border-[rgba(190,200,200,0.35)] bg-[linear-gradient(180deg,rgba(249,251,251,0.82),rgba(255,255,255,0.94))] px-5 py-5'>
-                <div
-                  className={`grid gap-4 ${
-                    n.content
-                      ? 'lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,1fr)]'
-                      : 'lg:grid-cols-1'
-                  }`}
-                >
+                <div className='space-y-4'>
                   {n.content && (
                     <section className='rounded-[1.35rem] border border-[rgba(168,239,239,0.4)] bg-[linear-gradient(135deg,rgba(168,239,239,0.16),rgba(255,255,255,0.92))] p-4 sm:p-5'>
                       <p className='text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-primary)]'>
@@ -198,7 +193,7 @@ export default function CoachNudgesList({ items }: Props) {
                     </section>
                   )}
 
-                  <div className='space-y-4'>
+                  <div className='grid gap-4 lg:grid-cols-2'>
                     {n.explanation && (
                       <section className='rounded-[1.35rem] border border-[rgba(190,200,200,0.45)] bg-white/80 p-4 sm:p-5'>
                         <p className='text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]'>
@@ -227,86 +222,75 @@ export default function CoachNudgesList({ items }: Props) {
                         )}
                         {n.matched_reason && (
                           <span className='rounded-full bg-[var(--color-surface-soft)] px-3 py-1 text-xs text-[var(--color-muted)]'>
-                            {n.matched_reason}
+                            {MATCHED_REASON_LABELS[n.matched_reason] ??
+                              n.matched_reason.replace(/_/g, ' ')}
                           </span>
                         )}
-                        <span className='rounded-full bg-[var(--color-surface-soft)] px-3 py-1 text-xs text-[var(--color-muted)]'>
-                          {PHRASING_LABELS[n.phrasing_source] ??
-                            n.phrasing_source}
-                        </span>
+                        {n.member_goal && (
+                          <span className='rounded-full bg-[var(--color-surface-soft)] px-3 py-1 text-xs text-[var(--color-muted)]'>
+                            Goal: {n.member_goal.replace(/_/g, ' ')}
+                          </span>
+                        )}
                       </div>
-                    </section>
-
-                    {n.confidence_factors &&
-                      n.confidence_factors.length > 0 && (
-                        <section className='rounded-[1.35rem] border border-[rgba(190,200,200,0.45)] bg-white/72 p-4'>
-                          <p className='text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]'>
-                            Confidence breakdown
-                          </p>
-                          {n.confidence_summary && (
-                            <p className='mt-2 text-sm leading-6 text-[var(--color-text)] italic'>
-                              {n.confidence_summary}
-                            </p>
-                          )}
-                          <ul className='mt-3 space-y-2'>
-                            {n.confidence_factors.map((f) => {
-                              const absPct = Math.round(
-                                Math.abs(f.value) * 100,
-                              );
-                              return (
-                                <li key={f.name}>
-                                  <div className='flex items-center justify-between text-xs'>
-                                    <span className='text-[var(--color-text)]'>
-                                      {f.label}
-                                    </span>
-                                    <span
-                                      className={`ml-2 shrink-0 font-mono font-semibold ${
-                                        f.value > 0
-                                          ? 'text-[var(--color-accent)]'
-                                          : f.value < 0
-                                            ? 'text-[var(--color-error)]'
-                                            : 'text-[var(--color-muted)]'
-                                      }`}
-                                    >
-                                      {f.value > 0 ? '+' : ''}
-                                      {Math.round(f.value * 100)}%
-                                    </span>
-                                  </div>
-                                  <div className='mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-soft)]'>
-                                    <div
-                                      className={`h-full rounded-full transition-all ${
-                                        f.value > 0
-                                          ? 'bg-[var(--color-accent)]'
-                                          : f.value < 0
-                                            ? 'bg-[var(--color-error)]'
-                                            : 'bg-[var(--color-muted)]'
-                                      }`}
-                                      style={{
-                                        width: `${Math.min(absPct, 100)}%`,
-                                      }}
-                                    />
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                          {n.confidence !== null && (
-                            <div className='mt-3 flex items-center justify-between border-t border-[rgba(190,200,200,0.25)] pt-2 text-xs font-semibold'>
-                              <span className='text-[var(--color-muted)]'>
-                                Total
-                              </span>
+                      {n.confidence_factors &&
+                        n.confidence_factors.length > 0 && (
+                          <>
+                            <div className='mt-4 flex items-center gap-2 border-t border-[rgba(190,200,200,0.25)] pt-3'>
+                              <p className='text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]'>
+                                Evidence
+                              </p>
                               <span
-                                className={
-                                  band.className.replace(/bg-\[.*?\]\s*/, '') +
-                                  ' font-mono'
-                                }
+                                className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${band.className}`}
                               >
-                                {Math.round(n.confidence * 100)}%
+                                {band.label}
                               </span>
                             </div>
-                          )}
-                        </section>
-                      )}
+                            <ul className='mt-2 space-y-1.5'>
+                              {n.confidence_factors
+                                .filter((f) => f.name !== 'base')
+                                .map((f) => (
+                                  <li
+                                    key={f.name}
+                                    className='flex items-start gap-2 text-sm text-[var(--color-text)]'
+                                  >
+                                    {f.value > 0 ? (
+                                      <>
+                                        <span
+                                          aria-hidden='true'
+                                          className='mt-0.5 text-[var(--color-accent)]'
+                                        >
+                                          ✓
+                                        </span>
+                                        <span className='sr-only'>supports</span>
+                                      </>
+                                    ) : f.value < 0 ? (
+                                      <>
+                                        <span
+                                          aria-hidden='true'
+                                          className='mt-0.5 text-[var(--color-warning-text)]'
+                                        >
+                                          ⚠
+                                        </span>
+                                        <span className='sr-only'>concerns</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span
+                                          aria-hidden='true'
+                                          className='mt-0.5 text-[var(--color-muted)]'
+                                        >
+                                          —
+                                        </span>
+                                        <span className='sr-only'>neutral</span>
+                                      </>
+                                    )}
+                                    <span>{f.label}</span>
+                                  </li>
+                                ))}
+                            </ul>
+                          </>
+                        )}
+                    </section>
                   </div>
                 </div>
 
@@ -316,6 +300,10 @@ export default function CoachNudgesList({ items }: Props) {
                       <span className='inline-flex items-center gap-1 font-medium'>
                         <span className='font-medium'>{actionInfo.icon}</span>
                         {actionInfo.text}
+                      </span>
+                    ) : n.status === 'active' ? (
+                      <span className='inline-flex items-center gap-1 rounded-full bg-[rgba(255,209,102,0.25)] px-2.5 py-0.5 font-semibold text-[var(--color-warning-text)]'>
+                        ⏳ Awaiting response
                       </span>
                     ) : (
                       'No member action yet'
