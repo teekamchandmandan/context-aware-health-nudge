@@ -15,20 +15,29 @@ import { createToastId, type ToastItem } from './Toast.shared';
 interface Props {
   memberId: string;
   onSignalSubmitted: () => void;
+  latestSignalsEnabled: boolean;
 }
 
-export default function QuickLog({ memberId, onSignalSubmitted }: Props) {
+export default function QuickLog({
+  memberId,
+  onSignalSubmitted,
+  latestSignalsEnabled,
+}: Props) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [latest, setLatest] = useState<LatestSignalsResponse>({});
   const refreshControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    if (!latestSignalsEnabled) {
+      return;
+    }
+
     const ac = new AbortController();
     fetchLatestSignals(memberId, ac.signal)
       .then(setLatest)
       .catch(() => {});
     return () => ac.abort();
-  }, [memberId]);
+  }, [latestSignalsEnabled, memberId]);
 
   const showToast = useCallback(
     (message: string) => {

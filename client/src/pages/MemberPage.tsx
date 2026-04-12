@@ -202,6 +202,7 @@ export default function MemberPage() {
           <QuickLog
             key={memberId}
             memberId={memberId}
+            latestSignalsEnabled={!loading}
             onSignalSubmitted={silentRefetch}
           />
         </section>

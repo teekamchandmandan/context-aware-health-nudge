@@ -81,6 +81,29 @@ WHERE id IN (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_one_active_nudge_per_member ON nudges(member_id) WHERE status = 'active';
 
+-- Prevent duplicate open escalations for the same member under concurrent escalation routing.
+-- Resolve older open escalations first so the invariant can be enforced safely.
+WITH ranked_open_escalations AS (
+    SELECT
+        id,
+        created_at,
+        ROW_NUMBER() OVER (
+            PARTITION BY member_id
+            ORDER BY created_at DESC, id DESC
+        ) AS row_num
+    FROM escalations
+    WHERE status = 'open'
+)
+UPDATE escalations
+SET status = 'resolved',
+    resolved_at = COALESCE(resolved_at, created_at)
+WHERE id IN (
+    SELECT id
+    FROM ranked_open_escalations
+    WHERE row_num > 1
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_one_open_escalation_per_member ON escalations(member_id) WHERE status = 'open';
+
 -- Performance indexes for frequent query patterns
 CREATE INDEX IF NOT EXISTS idx_signals_member_type ON signals(member_id, signal_type, created_at);
 CREATE INDEX IF NOT EXISTS idx_nudges_member_status ON nudges(member_id, status, created_at);

@@ -6,6 +6,39 @@ from app.engine import _id, _now, _ts, evaluate_member, select_nudge
 from .engine_support import latest_audit_payload
 
 
+def _create_recent_dismiss_history(db_conn, member_id: str) -> None:
+    now = _now()
+    for days_ago in (3, 2):
+        nudge_id = _id()
+        created_at = _ts(now - timedelta(days=days_ago, hours=1))
+        dismissed_at = _ts(now - timedelta(days=days_ago))
+        db_conn.execute(
+            """INSERT INTO nudges (id, member_id, nudge_type, content, explanation, matched_reason,
+               confidence, escalation_recommended, status, generated_by, phrasing_source,
+               created_at, delivered_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                nudge_id,
+                member_id,
+                "weight_check_in",
+                "content",
+                "explanation",
+                "missing_weight_log",
+                0.68,
+                0,
+                "dismissed",
+                "rule_engine",
+                "template",
+                created_at,
+                created_at,
+            ),
+        )
+        db_conn.execute(
+            "INSERT INTO nudge_actions (id, nudge_id, action_type, metadata_json, created_at) VALUES (?, ?, ?, ?, ?)",
+            (_id(), nudge_id, "dismiss", None, dismissed_at),
+        )
+
+
 def test_meal_mismatch(db_conn):
     result = evaluate_member(db_conn, "member_meal_01")
     assert result["state"] == "active"
@@ -59,6 +92,19 @@ def test_catch_up_member(db_conn):
     assert nudges == 0
 
 
+def test_seeded_support_member_escalates(db_conn):
+    result = evaluate_member(db_conn, "member_support_01")
+    assert result["state"] == "escalated"
+
+    nudge = db_conn.execute(
+        "SELECT * FROM nudges WHERE id = ?",
+        (result["nudge_id"],),
+    ).fetchone()
+    assert nudge is not None
+    assert nudge["nudge_type"] == "support_risk"
+    assert nudge["matched_reason"] == "repeated_low_mood"
+
+
 def test_new_signal_supersedes_active_nudge(db_conn):
     first_result = evaluate_member(db_conn, "member_weight_01")
     assert first_result["state"] == "active"
@@ -79,12 +125,13 @@ def test_new_signal_supersedes_active_nudge(db_conn):
 
 
 def test_support_risk(db_conn):
+    _create_recent_dismiss_history(db_conn, "member_catchup_01")
     db_conn.execute(
         "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
-        (_id(), "member_support_01", "mood_logged", json.dumps({"mood": "low"}), _ts(_now())),
+        (_id(), "member_catchup_01", "mood_logged", json.dumps({"mood": "low"}), _ts(_now())),
     )
     db_conn.commit()
-    result = evaluate_member(db_conn, "member_support_01")
+    result = evaluate_member(db_conn, "member_catchup_01")
     assert result["state"] == "escalated"
     assert "nudge_id" in result
     assert "escalation_id" in result
@@ -298,9 +345,10 @@ def test_daily_cap(db_conn):
 
 
 def test_support_risk_bypass(db_conn):
-    member = "member_support_01"
+    member = "member_catchup_01"
     now = _now()
 
+    _create_recent_dismiss_history(db_conn, member)
     db_conn.execute(
         "INSERT INTO signals (id, member_id, signal_type, payload_json, created_at) VALUES (?, ?, ?, ?, ?)",
         (_id(), member, "mood_logged", json.dumps({"mood": "low"}), _ts(now)),
